@@ -920,7 +920,7 @@ Contesto:
 Struttura JSON richiesta:
 {
   "entita": "nome e descrizione breve dell'ente",
-  "altaTensione": true/false,
+  "altaTensione": true/false (true SOLO se l'ente opera tipicamente a tensioni trifase >230V, es. motori industriali 400V, quadri MT/BT, inverter industriali. FALSE per qualsiasi elettrodomestico, scheda di controllo domestica, pompa monofase, dispositivo consumer, o qualsiasi ente non alimentato durante i test),
   "evidenzeVisive": "descrizione di evidenze visive già visibili nelle foto: bruciature, annerimenti, componenti fusi, tracce di arco elettrico (suggeriscono fenomeno elettrico) OPPURE usura, rotture meccaniche, corrosione (suggeriscono cause NON coperte dalla polizza)",
   "tests": [
     {
@@ -928,7 +928,7 @@ Struttura JSON richiesta:
       "tipo": "${ente.alim}",
       "scopo": "perché questo test è rilevante per accertare uno specifico fenomeno elettrico assicurato",
       "istruzioni": "istruzioni tecniche precise per elettrotecnico: impostazione multimetro, posizione puntali, valori attesi",
-      "istruzioniSemplici": "spiegazione ESCLUSIVAMENTE per chi non sa nulla di elettricità. USA SOLO: forme (quadrato, cilindro, filo), colori (rosso, nero, verde), posizioni fisiche (in alto, a sinistra, vicino a, sotto). VIETATO usare parole tecniche come morsetto, terminale, avvolgimento, condensatore, bobina, fusibile, connettore, impedenza ecc. Invece di 'morsetto L' scrivi 'il foro di sinistra'. Invece di 'terminale della bobina' scrivi 'i due piedini metallici che escono dal fondo del cilindro nero'. Frasi brevissime e dirette.",
+      "istruzioniSemplici": "spiegazione pratica per chi ha poca esperienza ma sa usare un multimetro. Usa termini tecnici essenziali (resistenza, Ohm, tensione, continuità) ma spiegali brevemente. Per i componenti, usa il nome tecnico E una descrizione visiva (es. 'il fusibile — quel piccolo cilindro metallico con i tappi bianchi — si trova in basso a destra della scheda'). Indica la posizione precisa sulla base di riferimenti visivi concreti. Spiega dove posizionare il puntale rosso e quello nero in modo preciso. Tono diretto e pratico, non eccessivamente tecnico né infantile.",
       "valoriAttesi": "valori normali vs anomali IN CHIAVE ASSICURATIVA: quale anomalia indica fenomeno elettrico coperto, quale indica invece usura o causa meccanica non coperta",
       "unita": "unità di misura (V AC, Ohm, A, MOhm). Per test visivi/funzionali senza misurazioni numeriche: N/A",
       "fotoSufficiente": true,
@@ -986,6 +986,9 @@ function renderTestPage(enteIdx) {
   const ente = state.enti[enteIdx];
   const container = document.getElementById('p3content');
   container.innerHTML = '';
+  // Scroll to top
+  window.scrollTo(0, 0);
+  document.getElementById('p3').scrollTop = 0;
 
   // Titolo ente
   const titleDiv = document.createElement('div');
@@ -1014,7 +1017,7 @@ function renderTestPage(enteIdx) {
     bWarn.innerHTML = '<div class="banner-title"><div class="banner-icon">!</div>Attenzione — Ente in tensione</div><div class="banner-text">Utilizza guanti isolanti certificati e un multimetro omologato CEI. Non toccare mai le parti metalliche dei puntali durante la misura.</div>';
     container.appendChild(bWarn);
   }
-  if (ente.highVoltage) {
+  if (ente.highVoltage && ente.alim === 'alim') {
     const bDanger = document.createElement('div');
     bDanger.className = 'banner banner-danger visible';
     bDanger.innerHTML = '<div class="banner-title"><div class="banner-icon">!</div>PERICOLO — Alta tensione rilevata</div><div class="banner-text">I test su questi impianti devono essere eseguiti ESCLUSIVAMENTE da personale con abilitazione PES/PAV.</div>';
@@ -1660,13 +1663,13 @@ async function sendEmail() {
       else if (pdfEsito === 'NON_COPERTO') doc.setTextColor(20, 100, 20);
       else doc.setTextColor(120, 80, 0);
       const titLinesEnte = doc.splitTextToSize(d.titoloDiagnosi || '', contentW - 10);
-      doc.text(titLines, margin + 5, y + 8);
-      const titH = titLines.length * 6;
+      doc.text(titLinesEnte, margin + 5, y + 8);
+      const titHEnte = titLinesEnte.length * 6;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
       doc.setTextColor(isDannoEnte ? 100 : 10, isDannoEnte ? 10 : 60, isDannoEnte ? 10 : 10);
-      doc.text(diagLines, margin + 5, y + 8 + titH, { maxWidth: contentW - 10 });
-      y += diagH + 16;
+      doc.text(diagLinesEnte, margin + 5, y + 8 + titHEnte, { maxWidth: contentW - 10 });
+      y += diagHEnte + 16;
 
     } // fine loop enti
 
