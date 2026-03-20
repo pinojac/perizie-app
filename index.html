@@ -1079,7 +1079,7 @@ function renderTestPage(enteIdx) {
             oninput="state.enti[${eIdx}].measures[${i}]=this.value" />
           <button onclick="setOLEnte(${eIdx},${i})" style="padding:9px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Over Limit / circuito aperto">OL</button>
           <button onclick="setMIEnte(${eIdx},${i})" style="padding:9px 8px;background:#854f0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Misure instabili / fluttuanti">≈</button>
-          ${t.rispostaDinamica ? `<button id="dynBtn_${eIdx}_${i_test}" style="padding:9px 8px;background:#1d9e75;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="${t.rispostaDinamica}">↗ OK</button>` : ''}
+          ${t.rispostaDinamica ? `<button id="dynBtn_${eIdx}_${i}" style="padding:9px 8px;background:#1d9e75;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="${t.rispostaDinamica}">↗ OK</button>` : ''}
           <div class="measure-unit">${t.unita}</div>
         </div>`}
       </div>
