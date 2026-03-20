@@ -1,6 +1,6 @@
 {
-  "name": "PeriziApp — Perizie Elettriche AI",
-  "short_name": "PeriziApp",
+  "name": "Nikola — ElettroPerizieAI",
+  "short_name": "Nikola",
   "description": "Assistente AI per perizie assicurative su danni da fenomeni elettrici",
   "start_url": "/",
   "display": "standalone",
