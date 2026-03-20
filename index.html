@@ -931,6 +931,7 @@ Struttura JSON richiesta:
       "istruzioniSemplici": "spiegazione pratica per chi ha poca esperienza ma sa usare un multimetro. Usa termini tecnici essenziali (resistenza, Ohm, tensione, continuità) ma spiegali brevemente. Per i componenti, usa il nome tecnico E una descrizione visiva (es. 'il fusibile — quel piccolo cilindro metallico con i tappi bianchi — si trova in basso a destra della scheda'). Indica la posizione precisa sulla base di riferimenti visivi concreti. Spiega dove posizionare il puntale rosso e quello nero in modo preciso. Tono diretto e pratico, non eccessivamente tecnico né infantile.",
       "valoriAttesi": "valori normali vs anomali IN CHIAVE ASSICURATIVA: quale anomalia indica fenomeno elettrico coperto, quale indica invece usura o causa meccanica non coperta",
       "unita": "unità di misura (V AC, Ohm, A, MOhm). Per test visivi/funzionali senza misurazioni numeriche: N/A",
+      "rispostaDinamica": "SOLO se per questo test esiste una risposta dinamica attesa che indica un componente integro (es. valori che variano progressivamente durante la misura fino a stabilizzarsi o raggiungere OL, come nella carica di un condensatore), descrivi quella dinamica in modo chiaro e conciso (es. 'Il valore parte basso, sale progressivamente e termina a OL: condensatore integro'). Se non esiste nessuna risposta dinamica particolare, scrivi null.",
       "fotoSufficiente": true,
       "richiestaFoto": null,
       "puntiMisura": null
@@ -1076,13 +1077,26 @@ function renderTestPage(enteIdx) {
             id="measure_${eIdx}_${i}"
             onchange="state.enti[${eIdx}].measures[${i}]=this.value"
             oninput="state.enti[${eIdx}].measures[${i}]=this.value" />
-          <button onclick="setOLEnte(${eIdx},${i})" style="padding:9px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">OL</button>
-          <button onclick="setMIEnte(${eIdx},${i})" style="padding:9px 8px;background:#854f0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Misure instabili">≈</button>
+          <button onclick="setOLEnte(${eIdx},${i})" style="padding:9px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Over Limit / circuito aperto">OL</button>
+          <button onclick="setMIEnte(${eIdx},${i})" style="padding:9px 8px;background:#854f0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Misure instabili / fluttuanti">≈</button>
+          ${t.rispostaDinamica ? `<button id="dynBtn_${eIdx}_${i_test}" style="padding:9px 8px;background:#1d9e75;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="${t.rispostaDinamica}">↗ OK</button>` : ''}
           <div class="measure-unit">${t.unita}</div>
         </div>`}
       </div>
     `;
     wrap.appendChild(card);
+
+    // Collega il pulsante dinamica se presente
+    if (t.rispostaDinamica) {
+      const dynBtn = card.querySelector(`#dynBtn_${eIdx}_${i}`);
+      if (dynBtn) {
+        const desc = t.rispostaDinamica;
+        dynBtn.addEventListener('click', () => {
+          const input = document.getElementById('measure_' + eIdx + '_' + i);
+          if (input) { input.value = desc; state.enti[eIdx].measures[i] = desc; }
+        });
+      }
+    }
   });
 }
 
@@ -1094,6 +1108,18 @@ function setOLEnte(enteIdx, testIdx) {
 function setMIEnte(enteIdx, testIdx) {
   const input = document.getElementById('measure_' + enteIdx + '_' + testIdx);
   if (input) { input.value = 'Misure instabili'; state.enti[enteIdx].measures[testIdx] = 'Misure instabili'; }
+}
+
+function setVVOLEnte(enteIdx, testIdx, descrizione) {
+  const val = descrizione || 'Risposta dinamica corretta (componente integro)';
+  const input = document.getElementById('measure_' + enteIdx + '_' + testIdx);
+  if (input) { input.value = val; state.enti[enteIdx].measures[testIdx] = val; }
+}
+
+function setVVOLEnteFromBtn(enteIdx, testIdx, btn) {
+  const val = btn.getAttribute('data-desc') || 'Risposta dinamica corretta (componente integro)';
+  const input = document.getElementById('measure_' + enteIdx + '_' + testIdx);
+  if (input) { input.value = val; state.enti[enteIdx].measures[testIdx] = val; }
 }
 
 function setMeasureEnte(enteIdx, testIdx, val) {
@@ -1368,32 +1394,37 @@ async function runDiagnosi() {
       valoriRiferimento: t.valoriAttesi
     }));
 
-    const prompt = `Sei un perito assicurativo elettrotecnico specializzato in sinistri RAMI ELEMENTARI con garanzia Fenomeno Elettrico.
+    const prompt = `Sei un perito elettrotecnico specializzato nell'accertamento di danni da fenomeni elettrici.
 
-Devi esprimere una diagnosi peritale con un unico obiettivo: stabilire se il danno all'ente è riconducibile a un fenomeno elettrico coperto dalla polizza assicurativa.
+Il tuo compito è determinare:
+1. Se l'ente è danneggiato o guasto
+2. Se il danno è riconducibile a un fenomeno elettrico (sbalzo di tensione, sovratensione, fulminazione, cortocircuito, arco voltaico, induzione elettromagnetica)
+3. Oppure se il danno è riconducibile ad altre cause autonome NON elettriche (usura, rottura meccanica, fine vita, corrosione, urto fisico)
 
-Fenomeni elettrici COPERTI: sbalzi di tensione, sovratensione (inclusa fulminazione), cortocircuito, arco voltaico, induzione elettromagnetica.
-Cause NON COPERTE: usura meccanica, fine vita, rotture fisiche, urti, cadute, corrosione, manutenzione carente.
+NON fare mai riferimento a polizze assicurative, coperture o garanzie. La tua diagnosi si limita a stabilire la natura tecnica del danno e la sua causa probabile.
+
+Per i test non effettuati (valore "non misurato"), valuta il loro peso diagnostico rispetto ai test eseguiti. Se i test eseguiti sono sufficientemente significativi, esprimi comunque una diagnosi indicando che test aggiuntivi potrebbero fornire conferma ulteriore.
 
 Ente: ${ente.entityDesc}
 Stato: ${ente.alim === 'alim' ? 'alimentato' : 'non alimentato'}
 Note operatore: ${ente.note || 'nessuna'}
-Evidenze visive rilevate: ${ente.evidenzeVisive || 'nessuna'}
+Evidenze visive: ${ente.evidenzeVisive || 'nessuna'}
 Misurazioni: ${JSON.stringify(testsJSON)}
 
 Rispondi SOLO con JSON valido, senza markdown, senza backtick:
 {
-  "esito": "COPERTO|NON_COPERTO|NON_DETERMINABILE",
-  "danno": true/false (true solo se esito è COPERTO),
-  "titoloDiagnosi": "titolo breve e preciso (es. 'Danno da sovratensione confermato', 'Danno da usura — non coperto da polizza', 'Elementi insufficienti per determinare la causa')",
-  "motivazione": "spiegazione dettagliata e professionale: quali misurazioni o evidenze visive supportano la conclusione, perché il danno è/non è riconducibile a fenomeno elettrico, con esplicito riferimento alla copertura assicurativa",
-  "causaProbabile": "descrizione della causa più probabile del danno (es. 'Sovratensione transitoria', 'Usura degli avvolgimenti', 'Cortocircuito interno', 'Rottura meccanica')",
+  "esito": "ELETTRICO|NON_ELETTRICO|NON_DETERMINABILE",
+  "danno": true/false (true se l'ente risulta danneggiato, indipendentemente dalla causa),
+  "titoloDiagnosi": "titolo tecnico preciso (es. 'Danno da sovratensione confermato', 'Guasto da usura meccanica', 'Nessuna evidenza di danno elettrico rilevata', 'Elementi parziali — test aggiuntivi consigliati')",
+  "motivazione": "spiegazione tecnica dettagliata: stato dell'ente, cosa indicano le misurazioni, qual è la causa più probabile del danno. Se alcuni test non sono stati effettuati, indica quali ulteriori accertamenti potrebbero rafforzare la diagnosi. Non fare mai riferimento a polizze o coperture assicurative.",
+  "causaProbabile": "causa tecnica più probabile (es. 'Sovratensione transitoria', 'Usura degli avvolgimenti', 'Cortocircuito interno', 'Rottura meccanica', 'Nessun danno rilevato')",
+  "testNonEffettuati": "elenco dei test non effettuati e loro rilevanza diagnostica, oppure null se tutti eseguiti",
   "risultati": [
     {
       "nome": "nome del test",
       "valore": "valore inserito con unità",
       "stato": "ok|anomalo|nd",
-      "nota": "commento in chiave assicurativa: cosa indica questo valore rispetto alla copertura"
+      "nota": "commento tecnico sul valore e cosa indica rispetto alla natura del danno"
     }
   ]
 }`;
@@ -1425,6 +1456,8 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick:
 
 // ---- RENDER DIAGNOSI MULTI-ENTE ----
 function renderDiagnosi() {
+  window.scrollTo(0, 0);
+  document.getElementById('p4').scrollTop = 0;
   document.getElementById('idShow4').textContent = state.id;
   const diagnosi = state.diagnosi; // array
 
@@ -1438,20 +1471,20 @@ function renderDiagnosi() {
     const enteLabel = state.enti.length > 1 ? `Ente ${idx+1} — ${ente.entityDesc || ''}` : ente.entityDesc || '';
 
     // Determina classe CSS e icona in base all'esito
-    const esito = d.esito || (d.danno ? 'COPERTO' : 'NON_COPERTO');
+    const esito = d.esito || (d.danno ? 'ELETTRICO' : 'NON_ELETTRICO');
     let cardClass, iconSymbol, causaLabel;
-    if (esito === 'COPERTO') {
+    if (esito === 'ELETTRICO' || esito === 'COPERTO') {
       cardClass = 'diagnosi-positiva';
       iconSymbol = '⚡';
-      causaLabel = 'Fenomeno elettrico coperto';
-    } else if (esito === 'NON_COPERTO') {
+      causaLabel = 'Danno da fenomeno elettrico';
+    } else if (esito === 'NON_ELETTRICO' || esito === 'NON_COPERTO') {
       cardClass = 'diagnosi-negativa';
       iconSymbol = '✓';
       causaLabel = 'Non riconducibile a fenomeno elettrico';
     } else {
       cardClass = '';
       iconSymbol = '?';
-      causaLabel = 'Elementi insufficienti';
+      causaLabel = 'Elementi parziali';
     }
 
     const section = document.createElement('div');
@@ -1468,6 +1501,7 @@ function renderDiagnosi() {
         </div>
         ${d.causaProbabile ? `<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;opacity:0.7;">Causa probabile: ${d.causaProbabile}</div>` : ''}
         <div class="diagnosi-text" ${esito === 'NON_DETERMINABILE' ? 'style="color:#7a4f00;"' : ''}>${d.motivazione}</div>
+        ${d.testNonEffettuati ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(0,0,0,0.05);border-radius:6px;font-size:12px;opacity:0.8;"><strong>Test non effettuati:</strong> ${d.testNonEffettuati}</div>` : ''}
       </div>
       <div style="margin-top:8px;">
         ${(d.risultati || []).map(r => `
@@ -1658,9 +1692,9 @@ async function sendEmail() {
       doc.roundedRect(margin, y, contentW, diagHEnte, 3, 3, 'FD');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      const pdfEsito = d.esito || (isDannoEnte ? 'COPERTO' : 'NON_COPERTO');
-      if (pdfEsito === 'COPERTO') doc.setTextColor(160, 20, 20);
-      else if (pdfEsito === 'NON_COPERTO') doc.setTextColor(20, 100, 20);
+      const pdfEsito = d.esito || (isDannoEnte ? 'ELETTRICO' : 'NON_ELETTRICO');
+      if (pdfEsito === 'ELETTRICO' || pdfEsito === 'COPERTO') doc.setTextColor(160, 20, 20);
+      else if (pdfEsito === 'NON_ELETTRICO' || pdfEsito === 'NON_COPERTO') doc.setTextColor(20, 100, 20);
       else doc.setTextColor(120, 80, 0);
       const titLinesEnte = doc.splitTextToSize(d.titoloDiagnosi || '', contentW - 10);
       doc.text(titLinesEnte, margin + 5, y + 8);
