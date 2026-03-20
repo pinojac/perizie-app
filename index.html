@@ -6,9 +6,9 @@
 <meta name="theme-color" content="#0f2740">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="PeriziApp">
+<meta name="apple-mobile-web-app-title" content="Nikola">
 <link rel="manifest" href="manifest.json">
-<title>PeriziApp — Perizie Elettriche AI</title>
+<title>Nikola — ElettroPerizieAI</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -525,7 +525,12 @@ input[type=file] { display: none; }
   <!-- HEADER -->
   <div class="header">
     <div class="header-top">
-      <div class="logo">PeriziApp</div>
+      <svg viewBox="0 0 220 44" height="44" xmlns="http://www.w3.org/2000/svg">
+        <text x="2" y="32" font-family="Arial,sans-serif" font-size="30" font-weight="900" fill="#ffffff" letter-spacing="-1">NIKOLA</text>
+        <polygon points="162,2 154,24 164,24 150,42 168,20 158,20 166,2" fill="#e8a020"/>
+        <rect x="2" y="36" width="176" height="1.5" fill="#e8a020" rx="1"/>
+        <text x="2" y="44" font-family="Arial,sans-serif" font-size="7.5" font-weight="400" fill="rgba(255,255,255,0.65)" letter-spacing="3.8">ELETTROPERIZIE AI</text>
+      </svg>
       <div class="header-id" id="headerIdLabel"></div>
     </div>
     <h1 id="headerTitle">Assistente AI per perizie elettriche</h1>
@@ -741,7 +746,7 @@ function renderPage(page) {
     else if (i === page) ps.classList.add('active');
   }
   document.getElementById('progressLabel').textContent = progressLabels[page];
-  document.getElementById('headerTitle').textContent = pageTitles[page] || 'PeriziApp';
+  document.getElementById('headerTitle').textContent = pageTitles[page] || '';
 
   const idLbl = document.getElementById('headerIdLabel');
   if (page > 1 && state.id) {
@@ -1084,7 +1089,7 @@ async function sendEmail() {
     doc.setTextColor(232, 160, 32);
     doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.text('PERIZIAPP', margin, 12);
+    doc.text('NIKOLA — ELETTROPERIZIE AI', margin, 12);
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(15);
     doc.text('Relazione di Perizia Elettrica', margin, 21);
@@ -1213,7 +1218,7 @@ async function sendEmail() {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(120, 130, 150);
-      doc.text('Generato da PeriziApp — Documento riservato ad uso peritale', margin, 289);
+      doc.text('Generato da Nikola ElettroPerizieAI — Documento riservato ad uso peritale', margin, 289);
       doc.text(`Pag. ${i}/${pageCount}`, W - margin, 289, { align: 'right' });
     }
 
