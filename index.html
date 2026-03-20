@@ -854,7 +854,8 @@ Il JSON deve avere questa struttura esatta:
     {
       "nome": "nome breve del test",
       "tipo": "${state.alim}",
-      "istruzioni": "istruzioni dettagliatissime in linguaggio semplicissimo, includi colore puntali (rosso/nero), posizione esatta, impostazione multimetro",
+      "istruzioni": "istruzioni tecniche dettagliate per un elettrotecnico esperto: impostazione multimetro, terminologia tecnica corretta, valori attesi precisi",
+      "istruzioniSemplici": "spiegazione in linguaggio chiarissimo per chi non ha competenze tecniche: descrivi i componenti usando solo forme, colori, posizioni fisiche (es. 'il cilindro nero grande come un dito', 'i due piedini metallici che escono dal fondo', 'il quadratino blu in alto a destra'). Spiega esattamente dove mettere il puntale ROSSO e dove mettere il puntale NERO usando solo riferimenti visivi e fisici, senza termini tecnici. Usa frasi brevi e dirette.",
       "valoriAttesi": "descrizione valori normali e anomali con interpretazione",
       "unita": "unità di misura (es. V AC, Ohm, A, MOhm)",
       "fotoSufficiente": true/false (true se dalle foto già caricate si vedono chiaramente i punti esatti dove appoggiare i puntali per questo test; false se serve una foto più ravvicinata o da angolazione diversa),
@@ -969,6 +970,11 @@ function renderTests() {
       <div class="test-card-body">
         ${imgSection}
         <div class="test-instructions">${t.istruzioni}</div>
+        ${t.istruzioniSemplici ? `
+        <div style="background:#e6f1fb;border-left:3px solid #1a3a5c;border-radius:0 8px 8px 0;padding:12px 14px;margin-top:2px;">
+          <div style="font-size:11px;font-weight:600;color:#1a3a5c;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">👆 Dove mettere i puntali — guida semplice</div>
+          <div style="font-size:13px;color:#1a3a5c;line-height:1.7;">${t.istruzioniSemplici}</div>
+        </div>` : ''}
         <div class="expected-values">
           <strong>Valori di riferimento</strong>
           ${t.valoriAttesi}
