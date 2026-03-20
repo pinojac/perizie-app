@@ -18,7 +18,7 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'PeriziApp <noreply@periziapp.it>',
+        from: 'PeriziApp <onboarding@resend.dev>',
         to: [to],
         subject: `Relazione perizia elettrica — ID ${id}`,
         html: `
@@ -28,26 +28,20 @@ export default async function handler(req, res) {
               <h1 style="color: white; font-size: 20px; margin: 0;">Relazione di Perizia Elettrica</h1>
             </div>
             <div style="background: #f8f9fb; padding: 24px; border-radius: 0 0 8px 8px; border: 1px solid #eef0f4;">
-              <p style="color: #505868;">In allegato la relazione relativa alla pratica <strong>${id}</strong>.</p>
-              <p style="color: #505868;">Il documento contiene:</p>
-              <ul style="color: #505868;">
-                <li>Documentazione fotografica</li>
-                <li>Ente identificato dall'AI</li>
-                <li>Risultati dei test con multimetro</li>
-                <li>Diagnosi finale</li>
-              </ul>
+              <p style="color: #505868;">La perizia relativa alla pratica <strong>${id}</strong> è stata completata.</p>
+              <p style="color: #505868;">Il PDF della relazione è stato scaricato automaticamente sul dispositivo dell'operatore al momento della diagnosi.</p>
+              <p style="color: #505868; margin-top: 16px;"><strong>Riepilogo:</strong></p>
+              <table style="width:100%; border-collapse: collapse; font-size: 14px; color: #505868;">
+                <tr><td style="padding: 6px 0; border-bottom: 1px solid #eef0f4;"><strong>ID Pratica</strong></td><td style="padding: 6px 0; border-bottom: 1px solid #eef0f4;">${id}</td></tr>
+                <tr><td style="padding: 6px 0; border-bottom: 1px solid #eef0f4;"><strong>Data</strong></td><td style="padding: 6px 0; border-bottom: 1px solid #eef0f4;">${new Date().toLocaleDateString('it-IT')}</td></tr>
+                <tr><td style="padding: 6px 0;"><strong>File</strong></td><td style="padding: 6px 0;">${filename}</td></tr>
+              </table>
               <p style="color: #9098a8; font-size: 12px; margin-top: 24px;">
                 Documento generato da PeriziApp — riservato ad uso peritale.
               </p>
             </div>
           </div>
-        `,
-        attachments: [
-          {
-            filename: filename,
-            content: pdfBase64
-          }
-        ]
+        `
       })
     });
 
