@@ -835,7 +835,7 @@ Genera da 2 a 4 test pertinenti per questo ente. Per ente alimentato usa test di
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoint: 'models/gemini-1.5-flash-latest:generateContent',
+        endpoint: 'models/gemini-2.5-flash-preview-04-17:generateContent',
         body: { contents: [{ parts }] }
       })
     });
@@ -987,7 +987,7 @@ JSON richiesto:
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoint: 'models/gemini-1.5-flash-latest:generateContent',
+        endpoint: 'models/gemini-2.5-flash-preview-04-17:generateContent',
         body: { contents: [{ parts: [{ text: prompt }] }] }
       })
     });
