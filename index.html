@@ -570,7 +570,7 @@ input[type=file] { display: none; }
   <!-- PAGINA 2: FOTO + NOTE -->
   <div class="page" id="p2">
     <div>
-      <div class="page-title">Documentazione</div>
+      <div class="page-title">Sopralluogo</div>
       <div class="page-sub">Carica le foto dell'ente e aggiungi eventuali note utili all'analisi.</div>
     </div>
     <div class="field">
@@ -705,7 +705,7 @@ let state = {
 };
 
 // ---- NAVIGAZIONE ----
-const pageTitles = ['','Nuova perizia','Documentazione','Esegui i test','Diagnosi'];
+const pageTitles = ['','Nuova perizia','Sopralluogo','Esegui i test','Diagnosi'];
 const progressLabels = ['','Passo 1 di 4 — ID pratica','Passo 2 di 4 — Foto e note','Passo 3 di 4 — Test','Passo 4 di 4 — Diagnosi'];
 
 async function goTo(page) {
@@ -1093,16 +1093,21 @@ async function sendEmail() {
     doc.setFont('helvetica', 'bold');
     doc.text('NIKOLA', margin, 14);
 
-    // Saetta disegnata con poligono jsPDF
-    // Forma: parallelogramma a freccia verso il basso
-    const sx = margin + 48; const sy = 5;
+    // Saetta disegnata con path jsPDF
     doc.setFillColor(232, 160, 32);
     doc.setDrawColor(232, 160, 32);
-    doc.setLineWidth(0);
-    // parte alta della saetta (triangolo superiore)
-    doc.triangle(sx + 2, sy, sx - 2, sy + 8, sx + 5, sy + 8, 'F');
-    // parte bassa della saetta (triangolo inferiore)  
-    doc.triangle(sx - 2, sy + 8, sx + 5, sy + 8, sx - 1, sy + 16, 'F');
+    doc.setLineWidth(0.1);
+    // Fulmine: 6 punti che formano una saetta classica
+    const sx = margin + 49;
+    doc.lines([
+      [5, 0],   // top-right
+      [-3, 9],  // mid-left  
+      [3, 0],   // mid-right notch
+      [-6, 11], // bottom-left
+      [-1, 0],  // bottom notch
+      [4, -9],  // back up right
+      [-2, 0],  // back to start notch
+    ], sx, 4, [1,1], 'F', true);
 
     // Linea ambra
     doc.setDrawColor(232, 160, 32);
