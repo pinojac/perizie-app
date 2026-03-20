@@ -30,13 +30,7 @@ export default async function handler(req, res) {
     if (!response.ok) throw new Error(data.error?.message || 'Errore OpenAI');
 
     const imageUrl = data.data[0].url;
-
-    // Scarica l'immagine e la restituisce come base64
-    const imgResponse = await fetch(imageUrl);
-    const arrayBuffer = await imgResponse.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-
-    return res.status(200).json({ image: base64, mimeType: 'image/png' });
+    return res.status(200).json({ url: imageUrl });
 
   } catch (error) {
     return res.status(500).json({ error: error.message });
