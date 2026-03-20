@@ -1081,6 +1081,10 @@ function renderTestPage(enteIdx) {
           <button onclick="setMIEnte(${eIdx},${i})" style="padding:9px 8px;background:#854f0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Misure instabili / fluttuanti">≈</button>
           ${t.rispostaDinamica ? `<button id="dynBtn_${eIdx}_${i}" style="padding:9px 8px;background:#1d9e75;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="${t.rispostaDinamica}">↗ OK</button>` : ''}
           <div class="measure-unit">${t.unita}</div>
+        </div>
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px;line-height:1.7;">
+          <span style="font-weight:600;color:var(--color-text-primary);">OL</span> = circuito aperto / fuori scala &nbsp;·&nbsp;
+          <span style="font-weight:600;color:var(--color-text-primary);">≈</span> = misure instabili/fluttuanti${t.rispostaDinamica ? ` &nbsp;·&nbsp; <span style="font-weight:600;color:#1d9e75;">↗ OK</span> = ${t.rispostaDinamica}` : ''}
         </div>`}
       </div>
     `;
@@ -1664,19 +1668,25 @@ async function sendEmail() {
 
       const risultati = d.risultati || [];
       risultati.forEach((r, ri) => {
-        if (ri % 2 === 0) { doc.setFillColor(250, 251, 253); doc.rect(margin, y - 1, contentW, 7, 'F'); }
+        // Calcola altezza riga in base al testo più lungo
+        const nomeLines = doc.splitTextToSize(r.nome, colWArr[0] - 4);
+        const valoreLines = doc.splitTextToSize(r.valore || '-', colWArr[1] + colWArr[2] - 8);
+        const rowLines = Math.max(nomeLines.length, valoreLines.length);
+        const rowH = rowLines * 5 + 4;
+
+        if (ri % 2 === 0) { doc.setFillColor(250, 251, 253); doc.rect(margin, y - 1, contentW, rowH, 'F'); }
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(60, 60, 80);
-        doc.text(doc.splitTextToSize(r.nome, colWArr[0] - 4)[0], margin + 2, y + 4);
-        doc.text(r.valore || '-', margin + colWArr[0] + 2, y + 4);
+        doc.text(nomeLines, margin + 2, y + 4);
+        doc.text(valoreLines, margin + colWArr[0] + 2, y + 4);
         const esito = r.stato === 'ok' ? 'Normale' : r.stato === 'anomalo' ? 'Anomalo' : 'N.D.';
         if (r.stato === 'anomalo') doc.setTextColor(180, 30, 30);
         else if (r.stato === 'ok') doc.setTextColor(20, 120, 60);
         else doc.setTextColor(120, 120, 120);
         doc.text(esito, margin + colWArr[0] + colWArr[1] + 2, y + 4);
         doc.setTextColor(60, 60, 80);
-        y += 7;
+        y += rowH;
       });
       y += 8;
 
