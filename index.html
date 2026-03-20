@@ -576,22 +576,25 @@ input[type=file] { display: none; }
     <div class="field">
       <label>Foto dell'ente (almeno 1, fino a 3)</label>
       <div class="photo-grid">
-        <div class="photo-slot" id="slot0" onclick="document.getElementById('f0').click()">
+        <div class="photo-slot" id="slot0" onclick="choosePhoto(0)">
           <div class="slot-plus">+</div><div class="slot-lbl">Foto 1</div>
           <button class="del-btn" onclick="delPhoto(event,0)">×</button>
         </div>
-        <div class="photo-slot" id="slot1" onclick="document.getElementById('f1').click()">
+        <div class="photo-slot" id="slot1" onclick="choosePhoto(1)">
           <div class="slot-plus">+</div><div class="slot-lbl">Foto 2</div>
           <button class="del-btn" onclick="delPhoto(event,1)">×</button>
         </div>
-        <div class="photo-slot" id="slot2" onclick="document.getElementById('f2').click()">
+        <div class="photo-slot" id="slot2" onclick="choosePhoto(2)">
           <div class="slot-plus">+</div><div class="slot-lbl">Foto 3</div>
           <button class="del-btn" onclick="delPhoto(event,2)">×</button>
         </div>
       </div>
-      <input type="file" id="f0" accept="image/*" onchange="loadPhoto(0,this)">
-      <input type="file" id="f1" accept="image/*" onchange="loadPhoto(1,this)">
-      <input type="file" id="f2" accept="image/*" onchange="loadPhoto(2,this)">
+      <input type="file" id="f0" accept="image/*" capture="environment" onchange="loadPhoto(0,this)">
+      <input type="file" id="f0g" accept="image/*" onchange="loadPhoto(0,this)">
+      <input type="file" id="f1" accept="image/*" capture="environment" onchange="loadPhoto(1,this)">
+      <input type="file" id="f1g" accept="image/*" onchange="loadPhoto(1,this)">
+      <input type="file" id="f2" accept="image/*" capture="environment" onchange="loadPhoto(2,this)">
+      <input type="file" id="f2g" accept="image/*" onchange="loadPhoto(2,this)">
     </div>
     <div class="field">
       <label>Note per l'AI (facoltativo)</label>
@@ -678,6 +681,15 @@ input[type=file] { display: none; }
 </div>
 
 <!-- LOADING OVERLAY -->
+<div id="photoChoiceOverlay" style="display:none;position:fixed;inset:0;background:rgba(15,39,64,0.7);z-index:200;align-items:flex-end;justify-content:center;">
+  <div style="background:var(--color-background-primary);border-radius:16px 16px 0 0;padding:24px 20px 36px;width:100%;max-width:480px;">
+    <div style="font-size:15px;font-weight:500;color:var(--color-text-primary);margin-bottom:16px;text-align:center;">Aggiungi foto</div>
+    <button onclick="triggerCamera()" style="width:100%;padding:14px;margin-bottom:10px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:500;cursor:pointer;">📷 Scatta foto</button>
+    <button onclick="triggerGallery()" style="width:100%;padding:14px;margin-bottom:10px;background:var(--color-background-secondary);color:var(--color-text-primary);border:0.5px solid var(--color-border-secondary);border-radius:10px;font-size:15px;font-weight:500;cursor:pointer;">🖼 Scegli dalla galleria</button>
+    <button onclick="closePhotoChoice()" style="width:100%;padding:12px;background:transparent;color:var(--color-text-secondary);border:none;font-size:14px;cursor:pointer;">Annulla</button>
+  </div>
+</div>
+
 <div class="loading-overlay" id="loadingOverlay">
   <div class="spinner"></div>
   <div class="loading-text" id="loadingText">Analisi in corso...</div>
@@ -801,7 +813,7 @@ function delPhoto(event, idx) {
   slot.classList.remove('has-photo');
   const labels = ['Foto 1','Foto 2','Foto 3'];
   slot.innerHTML = '<div class="slot-plus">+</div><div class="slot-lbl">'+labels[idx]+'</div><button class="del-btn" onclick="delPhoto(event,'+idx+')">×</button>';
-  slot.onclick = () => document.getElementById('f'+idx).click();
+  slot.onclick = () => choosePhoto(idx);
   document.getElementById('f'+idx).value = '';
 }
 
@@ -1306,6 +1318,25 @@ function hideLoading() {
 }
 function show(id) { document.getElementById(id).classList.add('visible'); }
 function hide(id) { document.getElementById(id).classList.remove('visible'); }
+
+// Scelta foto: fotocamera o galleria
+let currentPhotoIdx = 0;
+function choosePhoto(idx) {
+  currentPhotoIdx = idx;
+  const overlay = document.getElementById('photoChoiceOverlay');
+  overlay.style.display = 'flex';
+}
+function triggerCamera() {
+  closePhotoChoice();
+  document.getElementById('f' + currentPhotoIdx).click();
+}
+function triggerGallery() {
+  closePhotoChoice();
+  document.getElementById('f' + currentPhotoIdx + 'g').click();
+}
+function closePhotoChoice() {
+  document.getElementById('photoChoiceOverlay').style.display = 'none';
+}
 
 // Reset per nuova perizia
 function resetState() {
