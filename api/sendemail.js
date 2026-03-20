@@ -18,13 +18,13 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'PeriziApp <onboarding@resend.dev>',
+        from: 'Nikola ElettroPerizieAI <onboarding@resend.dev>',
         to: [to],
-        subject: `Relazione perizia elettrica — ID ${id}`,
+        subject: `Relazione perizia elettrica Nikola — ID ${id}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: #0f2740; padding: 24px; border-radius: 8px 8px 0 0;">
-              <p style="color: #e8a020; font-size: 12px; margin: 0 0 4px;">PERIZIAPP</p>
+              <p style="color: #e8a020; font-size: 12px; margin: 0 0 4px; letter-spacing: 2px;">NIKOLA — ELETTROPERIZIE AI</p>
               <h1 style="color: white; font-size: 20px; margin: 0;">Relazione di Perizia Elettrica</h1>
             </div>
             <div style="background: #f8f9fb; padding: 24px; border-radius: 0 0 8px 8px; border: 1px solid #eef0f4;">
@@ -37,7 +37,7 @@ export default async function handler(req, res) {
                 <tr><td style="padding: 6px 0;"><strong>File</strong></td><td style="padding: 6px 0;">${filename}</td></tr>
               </table>
               <p style="color: #9098a8; font-size: 12px; margin-top: 24px;">
-                Documento generato da PeriziApp — riservato ad uso peritale.
+                Documento generato da Nikola ElettroPerizieAI — riservato ad uso peritale.
               </p>
             </div>
           </div>
