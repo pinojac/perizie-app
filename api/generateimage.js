@@ -19,10 +19,10 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: 'dall-e-3',
-        prompt: `Technical illustration for electrical inspection. ${prompt}. Style: clean photorealistic illustration, white background, showing clearly where to place multimeter probes (red probe and black probe), labeled in Italian, professional technical manual style, no text overlays except labels.`,
+        prompt: `Close-up photorealistic image for electrical inspection manual. Show ONLY the specific electrical component being tested, with TWO multimeter probes physically touching the exact measurement points: one RED probe and one BLACK probe inserted or touching the terminals. The image must be EXTREMELY SPECIFIC to this test: ${prompt}. Requirements: macro close-up shot, white or neutral background, the component fills 80% of the frame, the red and black probes are clearly visible touching the exact correct terminals, photorealistic style like a professional technical manual photo, no text, no labels, no other tools visible except the two probes and the component under test.`,
         n: 1,
         size: '1024x1024',
-        quality: 'standard'
+        quality: 'hd'
       })
     });
 
