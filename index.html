@@ -923,7 +923,7 @@ Il JSON deve avere questa struttura esatta:
       "istruzioni": "istruzioni tecniche dettagliate per un elettrotecnico esperto: impostazione multimetro, terminologia tecnica corretta, valori attesi precisi",
       "istruzioniSemplici": "spiegazione in linguaggio chiarissimo per chi non ha competenze tecniche: descrivi i componenti usando solo forme, colori, posizioni fisiche (es. 'il cilindro nero grande come un dito', 'i due piedini metallici che escono dal fondo', 'il quadratino blu in alto a destra'). Spiega esattamente dove mettere il puntale ROSSO e dove mettere il puntale NERO usando solo riferimenti visivi e fisici, senza termini tecnici. Usa frasi brevi e dirette.",
       "valoriAttesi": "descrizione valori normali e anomali con interpretazione",
-      "unita": "unità di misura (es. V AC, Ohm, A, MOhm)",
+      "unita": "unità di misura (es. V AC, Ohm, A, MOhm). IMPORTANTE: se il test è visivo o funzionale e non prevede misurazioni numeriche con multimetro, scrivi esattamente: N/A",
 "fotoSufficiente": true,
       "richiestaFoto": null,
       "puntiMisura": null
@@ -1035,14 +1035,31 @@ function renderTestPage(enteIdx) {
           <strong>Valori di riferimento</strong>
           ${t.valoriAttesi}
         </div>
+        ${t.unita === 'N/A' || t.unita === 'visivo' || t.unita === 'funzionale' || t.unita === 'visivo/funzionale' ? `
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+          <button onclick="setMeasureEnte(${eIdx},${i},'Nessuna anomalia rilevata')" id="btn_ok_${eIdx}_${i}"
+            style="width:100%;padding:11px;border:1.5px solid #1d9e75;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:#1d9e75;text-align:left;transition:all 0.2s;">
+            ✓ Nessuna anomalia rilevata
+          </button>
+          <button onclick="setMeasureEnte(${eIdx},${i},'Anomalia rilevata come descritta')" id="btn_ko_${eIdx}_${i}"
+            style="width:100%;padding:11px;border:1.5px solid #e24b4a;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:#e24b4a;text-align:left;transition:all 0.2s;">
+            ✗ Anomalia rilevata come descritta
+          </button>
+          <button onclick="setMeasureEnte(${eIdx},${i},'Non verificabile')" id="btn_nv_${eIdx}_${i}"
+            style="width:100%;padding:11px;border:1.5px solid var(--color-border-secondary);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:var(--color-text-secondary);text-align:left;transition:all 0.2s;">
+            — Non verificabile
+          </button>
+          <input type="hidden" id="measure_${eIdx}_${i}" />
+        </div>` : `
         <div class="measure-row">
           <input type="text" inputmode="decimal" placeholder="Inserisci valore"
             id="measure_${eIdx}_${i}"
             onchange="state.enti[${eIdx}].measures[${i}]=this.value"
             oninput="state.enti[${eIdx}].measures[${i}]=this.value" />
           <button onclick="setOLEnte(${eIdx},${i})" style="padding:9px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;">OL</button>
+          <button onclick="setMIEnte(${eIdx},${i})" style="padding:9px 8px;background:#854f0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Misure instabili">≈</button>
           <div class="measure-unit">${t.unita}</div>
-        </div>
+        </div>`}
       </div>
     `;
     wrap.appendChild(card);
@@ -1051,9 +1068,28 @@ function renderTestPage(enteIdx) {
 
 function setOLEnte(enteIdx, testIdx) {
   const input = document.getElementById('measure_' + enteIdx + '_' + testIdx);
-  if (input) {
-    input.value = 'OL';
-    state.enti[enteIdx].measures[testIdx] = 'OL';
+  if (input) { input.value = 'OL'; state.enti[enteIdx].measures[testIdx] = 'OL'; }
+}
+
+function setMIEnte(enteIdx, testIdx) {
+  const input = document.getElementById('measure_' + enteIdx + '_' + testIdx);
+  if (input) { input.value = 'Misure instabili'; state.enti[enteIdx].measures[testIdx] = 'Misure instabili'; }
+}
+
+function setMeasureEnte(enteIdx, testIdx, val) {
+  state.enti[enteIdx].measures[testIdx] = val;
+  // Evidenzia il tasto selezionato
+  ['ok','ko','nv'].forEach(k => {
+    const btn = document.getElementById('btn_' + k + '_' + enteIdx + '_' + testIdx);
+    if (btn) btn.style.fontWeight = '500';
+  });
+  const map = {'Nessuna anomalia rilevata':'ok','Anomalia rilevata come descritta':'ko','Non verificabile':'nv'};
+  const activeBtn = document.getElementById('btn_' + map[val] + '_' + enteIdx + '_' + testIdx);
+  if (activeBtn) {
+    activeBtn.style.fontWeight = '700';
+    activeBtn.style.opacity = '1';
+    const colors = {'ok':'#edfaf3','ko':'#fff0f0','nv':'var(--color-background-secondary)'};
+    activeBtn.style.background = colors[map[val]] || '';
   }
 }
 
@@ -1157,7 +1193,7 @@ function loadExtraPhoto(idx, input) {
 }
 
 async function analyzeExtraPhoto(idx, photoBase64) {
-  const t = state.tests[idx];
+  const t = state.enti[state.currentEnteIdx].tests[idx];
 
   // Mostra loading
   const wrap = document.getElementById('extraPhotoWrap' + idx);
@@ -1607,27 +1643,35 @@ async function sendEmail() {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(pdfBlob);
     link.download = filename;
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 
     // Invia via API Resend
-    await fetch('/api/sendemail', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        to: state.email,
-        id: state.id,
-        pdfBase64,
-        filename
-      })
-    });
-
-    document.getElementById('pdfSentCard').style.display = 'flex';
-    document.getElementById('pdfSentSub').textContent = `PDF inviato a ${state.email}`;
+    try {
+      await fetch('/api/sendemail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: state.email,
+          id: state.id,
+          pdfBase64,
+          filename
+        })
+      });
+      document.getElementById('pdfSentCard').style.display = 'flex';
+      document.getElementById('pdfSentSub').textContent = `PDF inviato a ${state.email}`;
+    } catch(emailErr) {
+      document.getElementById('pdfSentCard').style.display = 'flex';
+      document.getElementById('pdfSentSub').textContent = 'PDF scaricato — invio email non riuscito';
+    }
 
   } catch(err) {
-    console.error(err);
+    console.error('PDF error:', err);
     document.getElementById('pdfSentCard').style.display = 'flex';
-    document.getElementById('pdfSentSub').textContent = 'PDF generato (invio email non configurato)';
+    document.getElementById('pdfSentSub').textContent = 'Errore generazione PDF: ' + err.message;
+    document.getElementById('err4').textContent = 'Errore: ' + err.message;
+    document.getElementById('err4').classList.add('visible');
   }
 }
 
