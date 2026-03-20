@@ -858,16 +858,9 @@ Il JSON deve avere questa struttura esatta:
       "istruzioniSemplici": "spiegazione in linguaggio chiarissimo per chi non ha competenze tecniche: descrivi i componenti usando solo forme, colori, posizioni fisiche (es. 'il cilindro nero grande come un dito', 'i due piedini metallici che escono dal fondo', 'il quadratino blu in alto a destra'). Spiega esattamente dove mettere il puntale ROSSO e dove mettere il puntale NERO usando solo riferimenti visivi e fisici, senza termini tecnici. Usa frasi brevi e dirette.",
       "valoriAttesi": "descrizione valori normali e anomali con interpretazione",
       "unita": "unità di misura (es. V AC, Ohm, A, MOhm)",
-      "fotoSufficiente": true/false (true se dalle foto già caricate si vedono chiaramente i punti esatti dove appoggiare i puntali per questo test; false se serve una foto più ravvicinata o da angolazione diversa),
-      "richiestaFoto": "se fotoSufficiente è false: descrizione chiara e semplice di quale foto aggiuntiva serve, es. 'Scatta una foto ravvicinata dei morsetti sul lato sinistro della pompa' oppure 'Apri il coperchio superiore e fotografa i connettori della scheda elettronica'. Se fotoSufficiente è true: null",
-      "puntiMisura": {
-        "descrizioneZona": "descrizione precisa dei punti, es. 'morsetto L in basso a sinistra del pannello, morsetto N accanto a destra'",
-        "xRosso": 0.0 (coordinata X percentuale 0-1, dove 0=sinistra 1=destra, stima sulla griglia 10x10 della foto),
-        "yRosso": 0.0 (coordinata Y percentuale 0-1, dove 0=alto 1=basso),
-        "xNero": 0.0,
-        "yNero": 0.0,
-        "fotoIndex": 0 (indice 0-2 della foto caricata su cui sono visibili i punti di misura)
-      }
+"fotoSufficiente": true,
+      "richiestaFoto": null,
+      "puntiMisura": null
     }
   ]
 }
@@ -934,33 +927,7 @@ function renderTests() {
     const card = document.createElement('div');
     card.className = 'test-card';
 
-    // Sezione immagine: overlay su foto reale o richiesta foto aggiuntiva
     let imgSection = '';
-    if (!t.fotoSufficiente && t.richiestaFoto) {
-      imgSection = `
-        <div style="background:#fff8e6;border:1.5px solid #f5c460;border-radius:10px;padding:14px;margin-bottom:4px;">
-          <div style="font-size:13px;font-weight:600;color:#7a4f00;margin-bottom:8px;">📷 Foto aggiuntiva necessaria</div>
-          <div style="font-size:13px;color:#854f0b;margin-bottom:12px;">${t.richiestaFoto}</div>
-          <input type="file" id="extraFile${i}" accept="image/*" capture="environment" style="display:none" onchange="loadExtraPhoto(${i}, this)">
-          <input type="file" id="extraFileG${i}" accept="image/*" style="display:none" onchange="loadExtraPhoto(${i}, this)">
-          <div style="display:flex;gap:8px;">
-            <button onclick="document.getElementById('extraFile${i}').click()" style="flex:1;padding:10px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;">📷 Scatta</button>
-            <button onclick="document.getElementById('extraFileG${i}').click()" style="flex:1;padding:10px;background:#f0f4f8;color:#1e2430;border:1.5px solid #d0d8e4;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;">🖼 Galleria</button>
-          </div>
-          <div id="extraPhotoWrap${i}" style="margin-top:10px;display:none;">
-            <div style="position:relative;border-radius:8px;overflow:hidden;">
-              <canvas id="canvas${i}" style="width:100%;display:block;border-radius:8px;"></canvas>
-            </div>
-          </div>
-        </div>`;
-    } else {
-      // Foto sufficiente — mostra overlay su foto esistente
-      imgSection = `
-        <div style="position:relative;border-radius:8px;overflow:hidden;background:#f0f4f8;" id="imgWrap${i}">
-          <canvas id="canvas${i}" style="width:100%;display:block;border-radius:8px;"></canvas>
-          <div id="canvasLoading${i}" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#9098a8;background:#f0f4f8;">Preparazione immagine...</div>
-        </div>`;
-    }
 
     card.innerHTML = `
       <div class="test-card-header">
@@ -968,7 +935,6 @@ function renderTests() {
         <span class="test-badge ${badgeClass}">${badgeTxt}</span>
       </div>
       <div class="test-card-body">
-        ${imgSection}
         <div class="test-instructions">${t.istruzioni}</div>
         ${t.istruzioniSemplici ? `
         <div style="background:#e6f1fb;border-left:3px solid #1a3a5c;border-radius:0 8px 8px 0;padding:12px 14px;margin-top:2px;">
