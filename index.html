@@ -756,19 +756,34 @@ function loadPhoto(idx, input) {
   if (!input.files || !input.files[0]) return;
   const reader = new FileReader();
   reader.onload = e => {
-    state.photos[idx] = e.target.result; // base64
-    const slot = document.getElementById('slot'+idx);
-    slot.classList.add('has-photo');
-    slot.innerHTML = '';
-    const img = document.createElement('img');
-    img.src = e.target.result;
-    const btn = document.createElement('button');
-    btn.className = 'del-btn';
-    btn.textContent = '×';
-    btn.onclick = ev => delPhoto(ev, idx);
-    slot.appendChild(img);
-    slot.appendChild(btn);
-    slot.onclick = null;
+    // Ridimensiona automaticamente a max 1200px per non superare i limiti di Vercel
+    const image = new Image();
+    image.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 1200;
+      let w = image.width, h = image.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(image, 0, 0, w, h);
+      const compressed = canvas.toDataURL('image/jpeg', 0.82);
+      state.photos[idx] = compressed;
+      const slot = document.getElementById('slot'+idx);
+      slot.classList.add('has-photo');
+      slot.innerHTML = '';
+      const img2 = document.createElement('img');
+      img2.src = compressed;
+      const btn = document.createElement('button');
+      btn.className = 'del-btn';
+      btn.textContent = '×';
+      btn.onclick = ev => delPhoto(ev, idx);
+      slot.appendChild(img2);
+      slot.appendChild(btn);
+      slot.onclick = null;
+    };
+    image.src = e.target.result;
   };
   reader.readAsDataURL(input.files[0]);
 }
