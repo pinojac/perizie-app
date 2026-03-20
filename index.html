@@ -1087,23 +1087,30 @@ async function sendEmail() {
     doc.setFillColor(15, 39, 64);
     doc.rect(0, 0, W, 36, 'F');
 
-    // Logo: NIKOLA + simbolo saetta testuale
+    // Logo: NIKOLA
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.text('NIKOLA', margin, 14);
 
-    // Simbolo saetta con carattere unicode
-    doc.setTextColor(232, 160, 32);
-    doc.setFontSize(14);
-    doc.text('⚡', margin + 46, 14);
+    // Saetta disegnata con poligono jsPDF
+    // Forma: parallelogramma a freccia verso il basso
+    const sx = margin + 48; const sy = 5;
+    doc.setFillColor(232, 160, 32);
+    doc.setDrawColor(232, 160, 32);
+    doc.setLineWidth(0);
+    // parte alta della saetta (triangolo superiore)
+    doc.triangle(sx + 2, sy, sx - 2, sy + 8, sx + 5, sy + 8, 'F');
+    // parte bassa della saetta (triangolo inferiore)  
+    doc.triangle(sx - 2, sy + 8, sx + 5, sy + 8, sx - 1, sy + 16, 'F');
 
-    // Linea ambra — larghezza calibrata su NIKOLA + saetta
+    // Linea ambra
     doc.setDrawColor(232, 160, 32);
     doc.setLineWidth(0.6);
     doc.line(margin, 17, margin + 54, 17);
 
     // Sottotitolo ELETTROPERIZIE AI
+    doc.setTextColor(232, 160, 32);
     doc.setFontSize(6);
     doc.setFont('helvetica', 'normal');
     doc.setCharSpace(2.2);
