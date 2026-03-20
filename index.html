@@ -972,10 +972,12 @@ async function generateTestImage(idx, prompt) {
       wrap.innerHTML = '';
       wrap.appendChild(img);
     } else if (wrap) {
-      wrap.innerHTML = '<div class="test-img-placeholder">Immagine non disponibile</div>';
+      const errMsg = data.error || 'Immagine non disponibile';
+      wrap.innerHTML = `<div class="test-img-placeholder">${errMsg}</div>`;
     }
   } catch(e) {
-    if (wrap) wrap.innerHTML = '<div class="test-img-placeholder">Immagine non disponibile</div>';
+    console.error('DALL-E error:', e);
+    if (wrap) wrap.innerHTML = `<div class="test-img-placeholder">Errore: ${e.message}</div>`;
   }
 }
 
