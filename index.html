@@ -962,9 +962,9 @@ async function generateTestImage(idx, prompt) {
     });
     const data = await res.json();
 
-    if (data.image && wrap) {
+    if (data.url && wrap) {
       const img = document.createElement('img');
-      img.src = `data:${data.mimeType};base64,${data.image}`;
+      img.src = data.url;
       img.style.width = '100%';
       img.style.height = 'auto';
       img.style.display = 'block';
