@@ -949,55 +949,33 @@ function renderTests() {
   });
 }
 
-// ---- GEMINI: GENERA DIAGRAMMA SVG ----
+// ---- DALL-E: GENERA IMMAGINE TEST ----
 async function generateTestImage(idx, prompt) {
   const wrap = document.getElementById('imgWrap'+idx);
-  if (wrap) wrap.innerHTML = '<div class="test-img-placeholder">Generazione diagramma...</div>';
-
-  const svgPrompt = `Genera un diagramma SVG tecnico che mostri: ${prompt}
-
-REGOLE FONDAMENTALI:
-- Rispondi SOLO con codice SVG puro, senza markdown, senza backtick, senza testo prima o dopo
-- Il codice deve iniziare esattamente con <svg e finire con </svg>
-- viewBox="0 0 400 220", sfondo bianco, stile tecnico professionale
-- Usa rettangoli, cerchi, linee e testo per rappresentare l'ente e i puntali
-- Puntale ROSSO = colore #e53e3e, puntale NERO = colore #1a1a1a
-- Etichette in italiano, font-size minimo 11px, font-family sans-serif
-- Frecce direzionali per indicare dove posizionare i puntali
-- Massimo 15 elementi SVG, mantieni il diagramma semplice e leggibile`;
+  if (wrap) wrap.innerHTML = '<div class="test-img-placeholder">Generazione immagine in corso...</div>';
 
   try {
-    const res = await fetch('/api/gemini', {
+    const res = await fetch('/api/generateimage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        endpoint: 'models/gemini-2.5-flash:generateContent',
-        body: { contents: [{ parts: [{ text: svgPrompt }] }] }
-      })
+      body: JSON.stringify({ prompt })
     });
     const data = await res.json();
-    let svgText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    svgText = svgText.replace(/```svg|```xml|```/g, '').trim();
 
-    const svgStart = svgText.indexOf('<svg');
-    const svgEnd = svgText.lastIndexOf('</svg>');
-    if (svgStart !== -1 && svgEnd !== -1) {
-      svgText = svgText.substring(svgStart, svgEnd + 6);
-    }
-
-    if (wrap && svgText.startsWith('<svg')) {
-      wrap.innerHTML = svgText;
-      const svgEl = wrap.querySelector('svg');
-      if (svgEl) {
-        svgEl.style.width = '100%';
-        svgEl.style.height = 'auto';
-        svgEl.style.display = 'block';
-      }
+    if (data.image && wrap) {
+      const img = document.createElement('img');
+      img.src = `data:${data.mimeType};base64,${data.image}`;
+      img.style.width = '100%';
+      img.style.height = 'auto';
+      img.style.display = 'block';
+      img.style.borderRadius = '6px';
+      wrap.innerHTML = '';
+      wrap.appendChild(img);
     } else if (wrap) {
-      wrap.innerHTML = '<div class="test-img-placeholder">Diagramma non disponibile</div>';
+      wrap.innerHTML = '<div class="test-img-placeholder">Immagine non disponibile</div>';
     }
   } catch(e) {
-    if (wrap) wrap.innerHTML = '<div class="test-img-placeholder">Diagramma non disponibile</div>';
+    if (wrap) wrap.innerHTML = '<div class="test-img-placeholder">Immagine non disponibile</div>';
   }
 }
 
