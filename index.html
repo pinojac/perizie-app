@@ -848,21 +848,32 @@ Contesto:
 
 Il JSON deve avere questa struttura esatta:
 {
-  "entita": "nome e descrizione breve dell'ente identificato (es. Motore monofase 230V, Lavatrice Whirlpool, Pompa idraulica, ecc.)",
-  "altaTensione": true/false (true se l'ente opera tipicamente a tensioni >230V, es. motori trifase 400V, quadri elettrici industriali),
+  "entita": "nome e descrizione breve dell'ente identificato",
+  "altaTensione": true/false,
   "tests": [
     {
       "nome": "nome breve del test",
-      "tipo": "${state.alim}" ,
-      "istruzioni": "istruzioni dettagliatissime su dove posizionare i puntali del multimetro, in linguaggio semplicissimo adatto anche a un non esperto, includi colore puntali (rosso/nero), posizione esatta, impostazione del multimetro",
-      "valoriAttesi": "descrizione dei valori normali e di quelli anomali con la relativa interpretazione",
-      "unita": "unità di misura (es. V AC, Ohm, A, MOhm, V DC)",
-      "promptImmagine": "descrizione dettagliata in inglese per DALL-E: primo piano ravvicinato dello specifico componente elettrico da testare (es: the circulation pump motor terminals, the electronic control board connectors, the capacitor terminals, ecc.), con i due puntali del multimetro (rosso e nero) fisicamente appoggiati sui punti esatti di misura. Descrivi il componente specifico, il punto esatto dove va il puntale rosso e dove va il puntale nero"
+      "tipo": "${state.alim}",
+      "istruzioni": "istruzioni dettagliatissime in linguaggio semplicissimo, includi colore puntali (rosso/nero), posizione esatta, impostazione multimetro",
+      "valoriAttesi": "descrizione valori normali e anomali con interpretazione",
+      "unita": "unità di misura (es. V AC, Ohm, A, MOhm)",
+      "fotoSufficiente": true/false (true se dalle foto già caricate si vedono chiaramente i punti esatti dove appoggiare i puntali per questo test; false se serve una foto più ravvicinata o da angolazione diversa),
+      "richiestaFoto": "se fotoSufficiente è false: descrizione chiara e semplice di quale foto aggiuntiva serve, es. 'Scatta una foto ravvicinata dei morsetti sul lato sinistro della pompa' oppure 'Apri il coperchio superiore e fotografa i connettori della scheda elettronica'. Se fotoSufficiente è true: null",
+      "puntiMisura": {
+        "descrizioneZona": "descrizione testuale della zona della foto dove si vedono i punti di misura, es. 'morsetti in basso a destra della pompa'",
+        "xRosso": 0.0 (coordinata X percentuale 0-1 del punto dove va il puntale rosso, calcolata sulla prima foto utile),
+        "yRosso": 0.0,
+        "xNero": 0.0,
+        "yNero": 0.0,
+        "fotoIndex": 0 (indice 0-2 della foto caricata su cui sono visibili i punti)
+      }
     }
   ]
 }
 
-Genera da 2 a 4 test pertinenti per questo ente. Per ente alimentato usa test di tensione/corrente. Per ente non alimentato usa test di resistenza/isolamento/continuità. Sii molto preciso e didattico nelle istruzioni.`;
+IMPORTANTE per puntiMisura: stima le coordinate con precisione guardando la foto. I valori sono percentuali: 0,0 = angolo in alto a sinistra, 1,1 = angolo in basso a destra. Se fotoSufficiente è false, metti coordinate a null.
+
+Genera da 2 a 4 test pertinenti. Per ente alimentato usa test di tensione/corrente. Per ente non alimentato usa test di resistenza/isolamento/continuità.`;
 
   const parts = [{ text: prompt }];
   photos.forEach(p => {
@@ -891,6 +902,7 @@ Genera da 2 a 4 test pertinenti per questo ente. Per ente alimentato usa test di
     state.highVoltage = parsed.altaTensione || false;
     state.tests = parsed.tests || [];
     state.measures = new Array(state.tests.length).fill('');
+    state.extraPhotos = new Array(state.tests.length).fill(null);
 
     hideLoading();
     renderPage(3);
@@ -904,11 +916,9 @@ Genera da 2 a 4 test pertinenti per questo ente. Per ente alimentato usa test di
 
 // ---- RENDER TEST CARDS ----
 function renderTests() {
-  // Banners
   document.getElementById('bannerAlim').className = 'banner banner-warn' + (state.alim === 'alim' ? ' visible' : '');
   document.getElementById('bannerHV').className = 'banner banner-danger' + (state.highVoltage ? ' visible' : '');
 
-  // Descrizione ente
   if (state.entityDesc) {
     document.getElementById('entityDescText').textContent = state.entityDesc;
     document.getElementById('entityDescSection').style.display = 'block';
@@ -922,15 +932,42 @@ function renderTests() {
     const badgeTxt = t.tipo === 'alim' ? 'Alimentato' : 'Non alim.';
     const card = document.createElement('div');
     card.className = 'test-card';
+
+    // Sezione immagine: overlay su foto reale o richiesta foto aggiuntiva
+    let imgSection = '';
+    if (!t.fotoSufficiente && t.richiestaFoto) {
+      imgSection = `
+        <div style="background:#fff8e6;border:1.5px solid #f5c460;border-radius:10px;padding:14px;margin-bottom:4px;">
+          <div style="font-size:13px;font-weight:600;color:#7a4f00;margin-bottom:8px;">📷 Foto aggiuntiva necessaria</div>
+          <div style="font-size:13px;color:#854f0b;margin-bottom:12px;">${t.richiestaFoto}</div>
+          <input type="file" id="extraFile${i}" accept="image/*" capture="environment" style="display:none" onchange="loadExtraPhoto(${i}, this)">
+          <input type="file" id="extraFileG${i}" accept="image/*" style="display:none" onchange="loadExtraPhoto(${i}, this)">
+          <div style="display:flex;gap:8px;">
+            <button onclick="document.getElementById('extraFile${i}').click()" style="flex:1;padding:10px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;">📷 Scatta</button>
+            <button onclick="document.getElementById('extraFileG${i}').click()" style="flex:1;padding:10px;background:#f0f4f8;color:#1e2430;border:1.5px solid #d0d8e4;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;">🖼 Galleria</button>
+          </div>
+          <div id="extraPhotoWrap${i}" style="margin-top:10px;display:none;">
+            <div style="position:relative;border-radius:8px;overflow:hidden;">
+              <canvas id="canvas${i}" style="width:100%;display:block;border-radius:8px;"></canvas>
+            </div>
+          </div>
+        </div>`;
+    } else {
+      // Foto sufficiente — mostra overlay su foto esistente
+      imgSection = `
+        <div style="position:relative;border-radius:8px;overflow:hidden;background:#f0f4f8;" id="imgWrap${i}">
+          <canvas id="canvas${i}" style="width:100%;display:block;border-radius:8px;"></canvas>
+          <div id="canvasLoading${i}" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#9098a8;background:#f0f4f8;">Preparazione immagine...</div>
+        </div>`;
+    }
+
     card.innerHTML = `
       <div class="test-card-header">
         <div class="test-card-title">Test ${i+1} — ${t.nome}</div>
         <span class="test-badge ${badgeClass}">${badgeTxt}</span>
       </div>
       <div class="test-card-body">
-        <div class="test-img-wrap" id="imgWrap${i}">
-          <div class="test-img-placeholder">Generazione immagine...</div>
-        </div>
+        ${imgSection}
         <div class="test-instructions">${t.istruzioni}</div>
         <div class="expected-values">
           <strong>Valori di riferimento</strong>
@@ -945,8 +982,172 @@ function renderTests() {
       </div>
     `;
     wrap.appendChild(card);
-    generateTestImage(i, t.promptImmagine);
+
+    // Disegna overlay se foto sufficiente
+    if (t.fotoSufficiente && t.puntiMisura) {
+      const fotoIdx = t.puntiMisura.fotoIndex || 0;
+      const foto = state.photos[fotoIdx] || state.photos.find(p => p !== null);
+      if (foto) drawPhotoOverlay(i, foto, t.puntiMisura);
+    }
   });
+}
+
+// ---- OVERLAY FOTO CON FRECCE ----
+function drawPhotoOverlay(idx, photoBase64, punti) {
+  const canvas = document.getElementById('canvas' + idx);
+  const loading = document.getElementById('canvasLoading' + idx);
+  if (!canvas) return;
+
+  const img = new Image();
+  img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+
+    if (punti && punti.xRosso !== null && punti.xNero !== null) {
+      const xR = punti.xRosso * img.width;
+      const yR = punti.yRosso * img.height;
+      const xN = punti.xNero * img.width;
+      const yN = punti.yNero * img.height;
+
+      // Disegna cerchio e puntale ROSSO
+      drawProbe(ctx, xR, yR, '#e53e3e', 'R');
+      // Disegna cerchio e puntale NERO
+      drawProbe(ctx, xN, yN, '#1a1a1a', 'N');
+    }
+
+    if (loading) loading.style.display = 'none';
+  };
+  img.src = photoBase64;
+}
+
+function drawProbe(ctx, x, y, color, label) {
+  const r = Math.max(ctx.canvas.width, ctx.canvas.height) * 0.04;
+
+  // Cerchio esterno lampeggiante (alone)
+  ctx.beginPath();
+  ctx.arc(x, y, r * 1.6, 0, Math.PI * 2);
+  ctx.fillStyle = color + '40';
+  ctx.fill();
+
+  // Cerchio principale
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = r * 0.15;
+  ctx.stroke();
+
+  // Label
+  ctx.font = `bold ${r * 1.1}px Arial`;
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, x, y);
+
+  // Freccia verso il centro
+  const arrowLen = r * 2.5;
+  const angle = (label === 'R') ? Math.PI * 0.75 : Math.PI * 0.25;
+  const ax = x + Math.cos(angle) * arrowLen;
+  const ay = y + Math.sin(angle) * arrowLen;
+
+  ctx.beginPath();
+  ctx.moveTo(ax, ay);
+  ctx.lineTo(x + Math.cos(angle) * r, y + Math.sin(angle) * r);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = r * 0.25;
+  ctx.stroke();
+}
+
+// ---- FOTO AGGIUNTIVA PER TEST ----
+function loadExtraPhoto(idx, input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    // Comprimi come le foto principali
+    const image = new Image();
+    image.onload = () => {
+      const canvas2 = document.createElement('canvas');
+      const MAX = 1200;
+      let w = image.width, h = image.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      canvas2.width = w; canvas2.height = h;
+      canvas2.getContext('2d').drawImage(image, 0, 0, w, h);
+      const compressed = canvas2.toDataURL('image/jpeg', 0.82);
+      state.extraPhotos[idx] = compressed;
+
+      // Mostra anteprima e chiedi a Gemini le coordinate
+      const wrap = document.getElementById('extraPhotoWrap' + idx);
+      if (wrap) wrap.style.display = 'block';
+      analyzeExtraPhoto(idx, compressed);
+    };
+    image.src = e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+async function analyzeExtraPhoto(idx, photoBase64) {
+  const t = state.tests[idx];
+  const canvas = document.getElementById('canvas' + idx);
+  if (canvas) {
+    const ctx = canvas.getContext('2d') || null;
+    // Mostra loading
+    const wrap = document.getElementById('extraPhotoWrap' + idx);
+    if (wrap) wrap.innerHTML = '<div style="padding:12px;font-size:13px;color:#9098a8;text-align:center;">Analisi foto in corso...</div>';
+  }
+
+  const [meta, data] = photoBase64.split(',');
+  const mimeType = meta.match(/:(.*?);/)[1];
+
+  const prompt = `Sei un esperto elettrotecnico. Guarda questa foto ravvicinata dell'ente elettrico.
+Il test da eseguire è: "${t.nome}".
+Istruzioni: "${t.istruzioni}"
+
+Rispondi SOLO con JSON valido, senza markdown:
+{
+  "xRosso": 0.0,
+  "yRosso": 0.0,
+  "xNero": 0.0,
+  "yNero": 0.0,
+  "descrizioneZona": "descrizione breve dei punti identificati"
+}
+
+Le coordinate sono percentuali 0-1 (0,0 = angolo alto sinistra, 1,1 = angolo basso destra).
+Indica con precisione dove appoggiare il puntale ROSSO e il puntale NERO per questo test specifico.`;
+
+  try {
+    const res = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoint: 'models/gemini-2.5-flash:generateContent',
+        body: { contents: [{ parts: [
+          { text: prompt },
+          { inline_data: { mime_type: mimeType, data: data } }
+        ]}]}
+      })
+    });
+    const result = await res.json();
+    let raw = result.candidates[0].content.parts[0].text.trim().replace(/```json|```/g, '').trim();
+    const punti = JSON.parse(raw);
+
+    // Aggiorna il canvas con l'overlay
+    const wrap = document.getElementById('extraPhotoWrap' + idx);
+    if (wrap) {
+      wrap.style.display = 'block';
+      wrap.innerHTML = `<div style="position:relative;border-radius:8px;overflow:hidden;"><canvas id="canvas${idx}" style="width:100%;display:block;border-radius:8px;"></canvas></div>`;
+    }
+    drawPhotoOverlay(idx, photoBase64, punti);
+
+  } catch(e) {
+    const wrap = document.getElementById('extraPhotoWrap' + idx);
+    if (wrap) wrap.innerHTML = `<div style="padding:12px;font-size:13px;color:#a32d2d;">Errore analisi: ${e.message}</div>`;
+  }
 }
 
 // ---- DALL-E: GENERA IMMAGINE TEST ----
@@ -1313,7 +1514,7 @@ function closePhotoChoice() {
 
 // Reset per nuova perizia
 function resetState() {
-  state = { id:'', email:'', alim:'alim', photos:[null,null,null], note:'', tests:[], measures:[], diagnosi:null, entityDesc:'', highVoltage:false };
+  state = { id:'', email:'', alim:'alim', photos:[null,null,null], note:'', tests:[], measures:[], diagnosi:null, entityDesc:'', highVoltage:false, extraPhotos:[] };
   document.getElementById('idPratica').value = '';
   document.getElementById('emailDest').value = '';
   document.getElementById('noteAI').value = '';
