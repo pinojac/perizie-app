@@ -10,6 +10,7 @@
 <link rel="manifest" href="manifest.json">
 <title>PeriziApp — Perizie Elettriche AI</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
 :root {
   --navy: #0f2740;
@@ -1068,13 +1069,185 @@ function renderDiagnosi() {
   `).join('');
 }
 
-// ---- INVIO EMAIL (EmailJS) ----
+// ---- GENERA E INVIA PDF ----
 async function sendEmail() {
-  // Per ora mostra solo il messaggio di conferma
-  // Nella Fase 4 integreremo EmailJS o Resend per l'invio reale
-  document.getElementById('pdfSentCard').style.display = 'flex';
-  document.getElementById('pdfSentSub').textContent = `Relazione per pratica ${state.id} — ${state.email}`;
-  // Nota: l'invio email reale verrà configurato nella Fase successiva
+  try {
+    // Genera PDF con jsPDF
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const W = 210; const margin = 18; const contentW = W - margin * 2;
+    let y = 0;
+
+    // INTESTAZIONE
+    doc.setFillColor(15, 39, 64);
+    doc.rect(0, 0, W, 32, 'F');
+    doc.setTextColor(232, 160, 32);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PERIZIAPP', margin, 12);
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(15);
+    doc.text('Relazione di Perizia Elettrica', margin, 21);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`ID Pratica: ${state.id}`, margin, 28);
+    doc.text(`Data: ${new Date().toLocaleDateString('it-IT')}`, W - margin, 28, { align: 'right' });
+    y = 42;
+
+    // DATI PERIZIA
+    doc.setTextColor(15, 39, 64);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Dati perizia', margin, y); y += 6;
+    doc.setDrawColor(200, 210, 220);
+    doc.line(margin, y, W - margin, y); y += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 80);
+    doc.text(`Stato ente: ${state.alim === 'alim' ? 'Alimentato' : 'Non alimentato'}`, margin, y); y += 6;
+    if (state.note) {
+      const noteLines = doc.splitTextToSize(`Note: ${state.note}`, contentW);
+      doc.text(noteLines, margin, y); y += noteLines.length * 5 + 2;
+    }
+    y += 4;
+
+    // FOTO
+    const photos = state.photos.filter(p => p !== null);
+    if (photos.length > 0) {
+      doc.setTextColor(15, 39, 64);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Documentazione fotografica', margin, y); y += 6;
+      doc.setDrawColor(200, 210, 220);
+      doc.line(margin, y, W - margin, y); y += 5;
+      const photoW = photos.length === 1 ? contentW * 0.6 : (contentW - 4) / Math.min(photos.length, 2);
+      const photoH = photoW * 0.65;
+      let px = margin;
+      for (let i = 0; i < Math.min(photos.length, 3); i++) {
+        if (i === 2 && photos.length === 3) { px = margin; y += photoH + 5; }
+        try {
+          doc.addImage(photos[i], 'JPEG', px, y, photoW, photoH);
+          doc.setDrawColor(200, 210, 220);
+          doc.rect(px, y, photoW, photoH);
+        } catch(e) {}
+        px += photoW + 4;
+      }
+      y += photoH + 10;
+    }
+
+    // ENTE IDENTIFICATO
+    doc.setTextColor(15, 39, 64);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Ente identificato', margin, y); y += 6;
+    doc.setDrawColor(200, 210, 220);
+    doc.line(margin, y, W - margin, y); y += 5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 80);
+    const entLines = doc.splitTextToSize(state.entityDesc, contentW);
+    doc.text(entLines, margin, y); y += entLines.length * 5 + 8;
+
+    // RISULTATI TEST
+    doc.setTextColor(15, 39, 64);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Risultati dei test', margin, y); y += 6;
+    doc.setDrawColor(200, 210, 220);
+    doc.line(margin, y, W - margin, y); y += 5;
+
+    // Tabella test
+    const colW = [contentW * 0.35, contentW * 0.2, contentW * 0.45];
+    doc.setFillColor(240, 244, 248);
+    doc.rect(margin, y - 1, contentW, 7, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(15, 39, 64);
+    doc.text('Test', margin + 2, y + 4);
+    doc.text('Valore', margin + colW[0] + 2, y + 4);
+    doc.text('Esito', margin + colW[0] + colW[1] + 2, y + 4);
+    y += 8;
+
+    const risultati = state.diagnosi?.risultati || [];
+    risultati.forEach((r, i) => {
+      if (i % 2 === 0) { doc.setFillColor(250, 251, 253); doc.rect(margin, y - 1, contentW, 7, 'F'); }
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(60, 60, 80);
+      doc.text(doc.splitTextToSize(r.nome, colW[0] - 4)[0], margin + 2, y + 4);
+      doc.text(r.valore || '-', margin + colW[0] + 2, y + 4);
+      const esito = r.stato === 'ok' ? 'Normale' : r.stato === 'anomalo' ? 'Anomalo' : 'N.D.';
+      if (r.stato === 'anomalo') doc.setTextColor(180, 30, 30);
+      else if (r.stato === 'ok') doc.setTextColor(20, 120, 60);
+      else doc.setTextColor(120, 120, 120);
+      doc.text(esito, margin + colW[0] + colW[1] + 2, y + 4);
+      doc.setTextColor(60, 60, 80);
+      y += 7;
+    });
+    y += 8;
+
+    // DIAGNOSI
+    if (y > 240) { doc.addPage(); y = 20; }
+    const isDanno = state.diagnosi?.danno;
+    doc.setFillColor(isDanno ? 252 : 237, isDanno ? 235 : 247, isDanno ? 235 : 237);
+    doc.setDrawColor(isDanno ? 200 : 100, isDanno ? 100 : 180, isDanno ? 100 : 100);
+    const diagLines = doc.splitTextToSize(state.diagnosi?.motivazione || '', contentW - 8);
+    const diagH = 22 + diagLines.length * 5;
+    doc.roundedRect(margin, y, contentW, diagH, 3, 3, 'FD');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(isDanno ? 160 : 20, isDanno ? 20 : 100, isDanno ? 20 : 20);
+    doc.text(state.diagnosi?.titoloDiagnosi || '', margin + 5, y + 8);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(isDanno ? 100 : 10, isDanno ? 10 : 60, isDanno ? 10 : 10);
+    doc.text(diagLines, margin + 5, y + 16);
+    y += diagH + 10;
+
+    // FOOTER
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFillColor(240, 244, 248);
+      doc.rect(0, 282, W, 15, 'F');
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(120, 130, 150);
+      doc.text('Generato da PeriziApp — Documento riservato ad uso peritale', margin, 289);
+      doc.text(`Pag. ${i}/${pageCount}`, W - margin, 289, { align: 'right' });
+    }
+
+    // SCARICA PDF localmente
+    const pdfBlob = doc.output('blob');
+    const pdfBase64 = doc.output('datauristring').split(',')[1];
+    const filename = `perizia_${state.id}_${new Date().toISOString().slice(0,10)}.pdf`;
+    
+    // Download automatico
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(pdfBlob);
+    link.download = filename;
+    link.click();
+
+    // Invia via API Resend
+    await fetch('/api/sendemail', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: state.email,
+        id: state.id,
+        pdfBase64,
+        filename
+      })
+    });
+
+    document.getElementById('pdfSentCard').style.display = 'flex';
+    document.getElementById('pdfSentSub').textContent = `PDF inviato a ${state.email}`;
+
+  } catch(err) {
+    console.error(err);
+    document.getElementById('pdfSentCard').style.display = 'flex';
+    document.getElementById('pdfSentSub').textContent = 'PDF generato (invio email non configurato)';
+  }
 }
 
 // ---- UTILITIES ----
