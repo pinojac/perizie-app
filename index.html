@@ -1655,23 +1655,27 @@ async function sendEmail() {
       doc.setDrawColor(200, 210, 220);
       doc.line(margin, y, W - margin, y); y += 5;
 
-      const colWArr = [contentW * 0.35, contentW * 0.2, contentW * 0.45];
+      // Colonne: Test 38%, Valore 42%, Esito 20%
+      const colT = contentW * 0.38;
+      const colV = contentW * 0.42;
+      const colE = contentW * 0.20;
       doc.setFillColor(240, 244, 248);
       doc.rect(margin, y - 1, contentW, 7, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(15, 39, 64);
       doc.text('Test', margin + 2, y + 4);
-      doc.text('Valore', margin + colWArr[0] + 2, y + 4);
-      doc.text('Esito', margin + colWArr[0] + colWArr[1] + 2, y + 4);
+      doc.text('Valore', margin + colT + 2, y + 4);
+      doc.text('Esito', margin + colT + colV + 2, y + 4);
       y += 8;
 
       const risultati = d.risultati || [];
       risultati.forEach((r, ri) => {
-        // Calcola altezza riga in base al testo più lungo
-        const nomeLines = doc.splitTextToSize(r.nome, colWArr[0] - 4);
-        const valoreLines = doc.splitTextToSize(r.valore || '-', colWArr[1] + colWArr[2] - 8);
-        const rowLines = Math.max(nomeLines.length, valoreLines.length);
+        const nomeLines = doc.splitTextToSize(r.nome, colT - 4);
+        const valoreLines = doc.splitTextToSize(r.valore || '-', colV - 4);
+        const esitoTxt = r.stato === 'ok' ? 'Normale' : r.stato === 'anomalo' ? 'Anomalo' : 'N.D.';
+        const esitoLines = doc.splitTextToSize(esitoTxt, colE - 2);
+        const rowLines = Math.max(nomeLines.length, valoreLines.length, esitoLines.length);
         const rowH = rowLines * 5 + 4;
 
         if (ri % 2 === 0) { doc.setFillColor(250, 251, 253); doc.rect(margin, y - 1, contentW, rowH, 'F'); }
@@ -1679,12 +1683,11 @@ async function sendEmail() {
         doc.setFontSize(9);
         doc.setTextColor(60, 60, 80);
         doc.text(nomeLines, margin + 2, y + 4);
-        doc.text(valoreLines, margin + colWArr[0] + 2, y + 4);
-        const esito = r.stato === 'ok' ? 'Normale' : r.stato === 'anomalo' ? 'Anomalo' : 'N.D.';
+        doc.text(valoreLines, margin + colT + 2, y + 4);
         if (r.stato === 'anomalo') doc.setTextColor(180, 30, 30);
         else if (r.stato === 'ok') doc.setTextColor(20, 120, 60);
         else doc.setTextColor(120, 120, 120);
-        doc.text(esito, margin + colWArr[0] + colWArr[1] + 2, y + 4);
+        doc.text(esitoLines, margin + colT + colV + 2, y + 4);
         doc.setTextColor(60, 60, 80);
         y += rowH;
       });
