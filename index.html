@@ -928,7 +928,7 @@ Struttura JSON richiesta:
       "tipo": "${ente.alim}",
       "scopo": "perché questo test è rilevante per accertare uno specifico fenomeno elettrico assicurato",
       "istruzioni": "istruzioni tecniche precise per elettrotecnico: impostazione multimetro, posizione puntali, valori attesi",
-      "istruzioniSemplici": "spiegazione per non esperti usando solo riferimenti visivi/fisici (forme, colori, posizioni): dove mettere puntale ROSSO e puntale NERO, senza termini tecnici",
+      "istruzioniSemplici": "spiegazione ESCLUSIVAMENTE per chi non sa nulla di elettricità. USA SOLO: forme (quadrato, cilindro, filo), colori (rosso, nero, verde), posizioni fisiche (in alto, a sinistra, vicino a, sotto). VIETATO usare parole tecniche come morsetto, terminale, avvolgimento, condensatore, bobina, fusibile, connettore, impedenza ecc. Invece di 'morsetto L' scrivi 'il foro di sinistra'. Invece di 'terminale della bobina' scrivi 'i due piedini metallici che escono dal fondo del cilindro nero'. Frasi brevissime e dirette.",
       "valoriAttesi": "valori normali vs anomali IN CHIAVE ASSICURATIVA: quale anomalia indica fenomeno elettrico coperto, quale indica invece usura o causa meccanica non coperta",
       "unita": "unità di misura (V AC, Ohm, A, MOhm). Per test visivi/funzionali senza misurazioni numeriche: N/A",
       "fotoSufficiente": true,
@@ -1341,7 +1341,12 @@ function collectMeasuresForEnte(enteIdx) {
   const ente = state.enti[enteIdx];
   ente.tests.forEach((t, i) => {
     const input = document.getElementById('measure_' + enteIdx + '_' + i);
-    if (input) ente.measures[i] = input.value.trim();
+    if (input && input.type !== 'hidden') {
+      // Campo numerico: leggi dal DOM
+      ente.measures[i] = input.value.trim();
+    }
+    // Per test visivi (input hidden), il valore è già in state.enti[enteIdx].measures[i]
+    // impostato da setMeasureEnte — non sovrascrivere
   });
 }
 
@@ -1609,15 +1614,15 @@ async function sendEmail() {
       doc.setDrawColor(200, 210, 220);
       doc.line(margin, y, W - margin, y); y += 5;
 
-      const colW = [contentW * 0.35, contentW * 0.2, contentW * 0.45];
+      const colWArr = [contentW * 0.35, contentW * 0.2, contentW * 0.45];
       doc.setFillColor(240, 244, 248);
       doc.rect(margin, y - 1, contentW, 7, 'F');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(15, 39, 64);
       doc.text('Test', margin + 2, y + 4);
-      doc.text('Valore', margin + colW[0] + 2, y + 4);
-      doc.text('Esito', margin + colW[0] + colW[1] + 2, y + 4);
+      doc.text('Valore', margin + colWArr[0] + 2, y + 4);
+      doc.text('Esito', margin + colWArr[0] + colWArr[1] + 2, y + 4);
       y += 8;
 
       const risultati = d.risultati || [];
@@ -1626,41 +1631,41 @@ async function sendEmail() {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(9);
         doc.setTextColor(60, 60, 80);
-        doc.text(doc.splitTextToSize(r.nome, colW[0] - 4)[0], margin + 2, y + 4);
-        doc.text(r.valore || '-', margin + colW[0] + 2, y + 4);
+        doc.text(doc.splitTextToSize(r.nome, colWArr[0] - 4)[0], margin + 2, y + 4);
+        doc.text(r.valore || '-', margin + colWArr[0] + 2, y + 4);
         const esito = r.stato === 'ok' ? 'Normale' : r.stato === 'anomalo' ? 'Anomalo' : 'N.D.';
         if (r.stato === 'anomalo') doc.setTextColor(180, 30, 30);
         else if (r.stato === 'ok') doc.setTextColor(20, 120, 60);
         else doc.setTextColor(120, 120, 120);
-        doc.text(esito, margin + colW[0] + colW[1] + 2, y + 4);
+        doc.text(esito, margin + colWArr[0] + colWArr[1] + 2, y + 4);
         doc.setTextColor(60, 60, 80);
         y += 7;
       });
       y += 8;
 
       // DIAGNOSI ENTE
-      const isDanno = d.danno;
-      const diagLines = doc.splitTextToSize(d.motivazione || '', contentW - 10);
-      const diagH = 24 + diagLines.length * 5;
+      const isDannoEnte = d.danno;
+      const diagLinesEnte = doc.splitTextToSize(d.motivazione || '', contentW - 10);
+      const diagHEnte = 24 + diagLinesEnte.length * 5;
       const pageH = 282;
-      if (y + diagH > pageH) { doc.addPage(); y = 20; }
-      doc.setFillColor(isDanno ? 252 : 237, isDanno ? 235 : 247, isDanno ? 235 : 237);
-      doc.setDrawColor(isDanno ? 200 : 100, isDanno ? 100 : 180, isDanno ? 100 : 100);
+      if (y + diagHEnte > pageH) { doc.addPage(); y = 20; }
+      doc.setFillColor(isDannoEnte ? 252 : 237, isDannoEnte ? 235 : 247, isDannoEnte ? 235 : 237);
+      doc.setDrawColor(isDannoEnte ? 200 : 100, isDannoEnte ? 100 : 180, isDannoEnte ? 100 : 100);
       doc.setLineWidth(0.5);
-      doc.roundedRect(margin, y, contentW, diagH, 3, 3, 'FD');
+      doc.roundedRect(margin, y, contentW, diagHEnte, 3, 3, 'FD');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      const pdfEsito = d.esito || (isDanno ? 'COPERTO' : 'NON_COPERTO');
+      const pdfEsito = d.esito || (isDannoEnte ? 'COPERTO' : 'NON_COPERTO');
       if (pdfEsito === 'COPERTO') doc.setTextColor(160, 20, 20);
       else if (pdfEsito === 'NON_COPERTO') doc.setTextColor(20, 100, 20);
       else doc.setTextColor(120, 80, 0);
-      const titLines = doc.splitTextToSize(d.titoloDiagnosi || '', contentW - 10);
+      const titLinesEnte = doc.splitTextToSize(d.titoloDiagnosi || '', contentW - 10);
       doc.text(titLines, margin + 5, y + 8);
       const titH = titLines.length * 6;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.setTextColor(isDanno ? 100 : 10, isDanno ? 10 : 60, isDanno ? 10 : 10);
-      doc.text(diagLines, margin + 5, y + 8 + titH);
+      doc.setTextColor(isDannoEnte ? 100 : 10, isDannoEnte ? 10 : 60, isDannoEnte ? 10 : 10);
+      doc.text(diagLines, margin + 5, y + 8 + titH, { maxWidth: contentW - 10 });
       y += diagH + 16;
 
     } // fine loop enti
