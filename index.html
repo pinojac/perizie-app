@@ -788,7 +788,7 @@ function updateProgressBar(currentPage, total) {
 
 // ---- GESTIONE ENTI IN PAGINA 2 ----
 function addEnte() {
-  state.enti.push({ photos: [null,null,null], note: '', alim: 'alim', tests: [], measures: [], entityDesc: '', highVoltage: false });
+  state.enti.push({ photos: [null,null,null], note: '', alim: 'alim', tests: [], measures: [], entityDesc: '', evidenzeVisive: '', highVoltage: false });
   renderEntiList();
 }
 
@@ -905,35 +905,40 @@ async function runAnalisiFotoForEnte(enteIdx) {
   const photos = ente.photos.filter(p => p !== null);
   const alimTxt = ente.alim === 'alim' ? 'alimentato (sotto tensione)' : 'non alimentato (scollegato dalla rete)';
 
-  const prompt = `Sei un esperto elettrotecnico che assiste nella perizia assicurativa di danni da fenomeni elettrici.
-Analizza le foto allegate dell'ente elettrico e rispondi SOLO con un oggetto JSON valido, senza markdown, senza backtick, senza testo aggiuntivo.
+  const prompt = `Sei un perito assicurativo elettrotecnico specializzato in sinistri RAMI ELEMENTARI con garanzia Fenomeno Elettrico.
+
+Il tuo compito NON è diagnosticare generici guasti, ma ESCLUSIVAMENTE determinare se vi sono evidenze di danno riconducibile a fenomeno elettrico assicurato: sbalzi di tensione, sovratensione (inclusa fulminazione), cortocircuito, arco voltaico, induzione elettromagnetica.
+
+NON rientrano nella copertura e NON devono orientare la diagnosi: usura meccanica, rotture fisiche, danni da urti/cadute, corrosione, fine vita del componente, guasti da manutenzione carente.
+
+Analizza le foto e rispondi SOLO con JSON valido, senza markdown, senza backtick.
 
 Contesto:
 - L'ente è ${alimTxt}
 - Note dell'operatore: "${ente.note || 'nessuna'}"
 
-Il JSON deve avere questa struttura esatta:
+Struttura JSON richiesta:
 {
-  "entita": "nome e descrizione breve dell'ente identificato",
+  "entita": "nome e descrizione breve dell'ente",
   "altaTensione": true/false,
+  "evidenzeVisive": "descrizione di evidenze visive già visibili nelle foto: bruciature, annerimenti, componenti fusi, tracce di arco elettrico (suggeriscono fenomeno elettrico) OPPURE usura, rotture meccaniche, corrosione (suggeriscono cause NON coperte dalla polizza)",
   "tests": [
     {
       "nome": "nome breve del test",
       "tipo": "${ente.alim}",
-      "istruzioni": "istruzioni tecniche dettagliate per un elettrotecnico esperto: impostazione multimetro, terminologia tecnica corretta, valori attesi precisi",
-      "istruzioniSemplici": "spiegazione in linguaggio chiarissimo per chi non ha competenze tecniche: descrivi i componenti usando solo forme, colori, posizioni fisiche (es. 'il cilindro nero grande come un dito', 'i due piedini metallici che escono dal fondo', 'il quadratino blu in alto a destra'). Spiega esattamente dove mettere il puntale ROSSO e dove mettere il puntale NERO usando solo riferimenti visivi e fisici, senza termini tecnici. Usa frasi brevi e dirette.",
-      "valoriAttesi": "descrizione valori normali e anomali con interpretazione",
-      "unita": "unità di misura (es. V AC, Ohm, A, MOhm). IMPORTANTE: se il test è visivo o funzionale e non prevede misurazioni numeriche con multimetro, scrivi esattamente: N/A",
-"fotoSufficiente": true,
+      "scopo": "perché questo test è rilevante per accertare uno specifico fenomeno elettrico assicurato",
+      "istruzioni": "istruzioni tecniche precise per elettrotecnico: impostazione multimetro, posizione puntali, valori attesi",
+      "istruzioniSemplici": "spiegazione per non esperti usando solo riferimenti visivi/fisici (forme, colori, posizioni): dove mettere puntale ROSSO e puntale NERO, senza termini tecnici",
+      "valoriAttesi": "valori normali vs anomali IN CHIAVE ASSICURATIVA: quale anomalia indica fenomeno elettrico coperto, quale indica invece usura o causa meccanica non coperta",
+      "unita": "unità di misura (V AC, Ohm, A, MOhm). Per test visivi/funzionali senza misurazioni numeriche: N/A",
+      "fotoSufficiente": true,
       "richiestaFoto": null,
       "puntiMisura": null
     }
   ]
 }
 
-IMPORTANTE per puntiMisura: stima le coordinate con precisione guardando la foto. I valori sono percentuali: 0,0 = angolo in alto a sinistra, 1,1 = angolo in basso a destra. Se fotoSufficiente è false, metti coordinate a null.
-
-Genera da 2 a 4 test pertinenti. Per ente alimentato usa test di tensione/corrente. Per ente non alimentato usa test di resistenza/isolamento/continuità.`;
+Genera 2-4 test PERTINENTI all'accertamento del fenomeno elettrico assicurato. Escludi test che valutano solo funzionamento generico o danni meccanici non coperti.`;
 
   const parts = [{ text: prompt }];
   photos.forEach(p => {
@@ -961,6 +966,7 @@ Genera da 2 a 4 test pertinenti. Per ente alimentato usa test di tensione/corren
     const ente = state.enti[state.currentEnteIdx];
     ente.entityDesc = parsed.entita || '';
     ente.highVoltage = parsed.altaTensione || false;
+    ente.evidenzeVisive = parsed.evidenzeVisive || '';
     ente.tests = parsed.tests || [];
     ente.measures = new Array(ente.tests.length).fill('');
     state.extraPhotos = new Array(ente.tests.length).fill(null);
@@ -989,6 +995,17 @@ function renderTestPage(enteIdx) {
     <div class="page-sub">${ente.entityDesc || 'Segui le istruzioni e inserisci i valori misurati.'}</div>
   `;
   container.appendChild(titleDiv);
+
+  // Evidenze visive rilevate dall'AI
+  if (ente.evidenzeVisive) {
+    const evDiv = document.createElement('div');
+    evDiv.style.cssText = 'background:#f8f9fb;border:1px solid var(--color-border-tertiary);border-left:3px solid #e8a020;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:4px;';
+    evDiv.innerHTML = `
+      <div style="font-size:11px;font-weight:600;color:#7a4f00;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">🔍 Evidenze visive rilevate dall'AI</div>
+      <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.6;">${ente.evidenzeVisive}</div>
+    `;
+    container.appendChild(evDiv);
+  }
 
   // Banner sicurezza
   if (ente.alim === 'alim') {
@@ -1343,26 +1360,32 @@ async function runDiagnosi() {
       valoriRiferimento: t.valoriAttesi
     }));
 
-    const prompt = `Sei un esperto elettrotecnico perito assicurativo.
-Analizza i risultati dei test sul seguente ente elettrico e fornisci una diagnosi peritale.
-Rispondi SOLO con JSON valido, senza markdown, senza backtick, senza testo aggiuntivo.
+    const prompt = `Sei un perito assicurativo elettrotecnico specializzato in sinistri RAMI ELEMENTARI con garanzia Fenomeno Elettrico.
+
+Devi esprimere una diagnosi peritale con un unico obiettivo: stabilire se il danno all'ente è riconducibile a un fenomeno elettrico coperto dalla polizza assicurativa.
+
+Fenomeni elettrici COPERTI: sbalzi di tensione, sovratensione (inclusa fulminazione), cortocircuito, arco voltaico, induzione elettromagnetica.
+Cause NON COPERTE: usura meccanica, fine vita, rotture fisiche, urti, cadute, corrosione, manutenzione carente.
 
 Ente: ${ente.entityDesc}
 Stato: ${ente.alim === 'alim' ? 'alimentato' : 'non alimentato'}
-Note: ${ente.note || 'nessuna'}
+Note operatore: ${ente.note || 'nessuna'}
+Evidenze visive rilevate: ${ente.evidenzeVisive || 'nessuna'}
 Misurazioni: ${JSON.stringify(testsJSON)}
 
-JSON richiesto:
+Rispondi SOLO con JSON valido, senza markdown, senza backtick:
 {
-  "danno": true/false,
-  "titoloDiagnosi": "titolo breve della diagnosi",
-  "motivazione": "spiegazione dettagliata in italiano chiaro e professionale",
+  "esito": "COPERTO|NON_COPERTO|NON_DETERMINABILE",
+  "danno": true/false (true solo se esito è COPERTO),
+  "titoloDiagnosi": "titolo breve e preciso (es. 'Danno da sovratensione confermato', 'Danno da usura — non coperto da polizza', 'Elementi insufficienti per determinare la causa')",
+  "motivazione": "spiegazione dettagliata e professionale: quali misurazioni o evidenze visive supportano la conclusione, perché il danno è/non è riconducibile a fenomeno elettrico, con esplicito riferimento alla copertura assicurativa",
+  "causaProbabile": "descrizione della causa più probabile del danno (es. 'Sovratensione transitoria', 'Usura degli avvolgimenti', 'Cortocircuito interno', 'Rottura meccanica')",
   "risultati": [
     {
       "nome": "nome del test",
       "valore": "valore inserito con unità",
       "stato": "ok|anomalo|nd",
-      "nota": "breve commento"
+      "nota": "commento in chiave assicurativa: cosa indica questo valore rispetto alla copertura"
     }
   ]
 }`;
@@ -1406,19 +1429,37 @@ function renderDiagnosi() {
     const isPos = d.danno;
     const enteLabel = state.enti.length > 1 ? `Ente ${idx+1} — ${ente.entityDesc || ''}` : ente.entityDesc || '';
 
+    // Determina classe CSS e icona in base all'esito
+    const esito = d.esito || (d.danno ? 'COPERTO' : 'NON_COPERTO');
+    let cardClass, iconSymbol, causaLabel;
+    if (esito === 'COPERTO') {
+      cardClass = 'diagnosi-positiva';
+      iconSymbol = '⚡';
+      causaLabel = 'Fenomeno elettrico coperto';
+    } else if (esito === 'NON_COPERTO') {
+      cardClass = 'diagnosi-negativa';
+      iconSymbol = '✓';
+      causaLabel = 'Non riconducibile a fenomeno elettrico';
+    } else {
+      cardClass = '';
+      iconSymbol = '?';
+      causaLabel = 'Elementi insufficienti';
+    }
+
     const section = document.createElement('div');
     section.style.cssText = 'margin-bottom:20px;';
     section.innerHTML = `
       ${state.enti.length > 1 ? `<div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">${enteLabel}</div>` : ''}
-      <div class="diagnosi-card ${isPos ? 'diagnosi-positiva' : 'diagnosi-negativa'}">
+      <div class="diagnosi-card ${cardClass}" ${esito === 'NON_DETERMINABILE' ? 'style="background:#fff8e6;border:2px solid #f5c460;"' : ''}>
         <div class="diagnosi-header">
-          <div class="diagnosi-icon">${isPos ? '⚠' : '✓'}</div>
+          <div class="diagnosi-icon" ${esito === 'NON_DETERMINABILE' ? 'style="background:#e8a020;"' : ''}>${iconSymbol}</div>
           <div>
-            <div class="diagnosi-title">${d.titoloDiagnosi}</div>
+            <div class="diagnosi-title" ${esito === 'NON_DETERMINABILE' ? 'style="color:#7a4f00;"' : ''}>${d.titoloDiagnosi}</div>
             <div class="diagnosi-subtitle">Pratica ${state.id} — ${new Date().toLocaleDateString('it-IT')}</div>
           </div>
         </div>
-        <div class="diagnosi-text">${d.motivazione}</div>
+        ${d.causaProbabile ? `<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;opacity:0.7;">Causa probabile: ${d.causaProbabile}</div>` : ''}
+        <div class="diagnosi-text" ${esito === 'NON_DETERMINABILE' ? 'style="color:#7a4f00;"' : ''}>${d.motivazione}</div>
       </div>
       <div style="margin-top:8px;">
         ${(d.risultati || []).map(r => `
@@ -1609,7 +1650,10 @@ async function sendEmail() {
       doc.roundedRect(margin, y, contentW, diagH, 3, 3, 'FD');
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      doc.setTextColor(isDanno ? 160 : 20, isDanno ? 20 : 100, isDanno ? 20 : 20);
+      const pdfEsito = d.esito || (isDanno ? 'COPERTO' : 'NON_COPERTO');
+      if (pdfEsito === 'COPERTO') doc.setTextColor(160, 20, 20);
+      else if (pdfEsito === 'NON_COPERTO') doc.setTextColor(20, 100, 20);
+      else doc.setTextColor(120, 80, 0);
       const titLines = doc.splitTextToSize(d.titoloDiagnosi || '', contentW - 10);
       doc.text(titLines, margin + 5, y + 8);
       const titH = titLines.length * 6;
@@ -1712,7 +1756,7 @@ function closePhotoChoice() {
 function resetState() {
   state = {
     id:'', email:'',
-    enti: [{ photos:[null,null,null], note:'', alim:'alim', tests:[], measures:[], entityDesc:'', highVoltage:false }],
+    enti: [{ photos:[null,null,null], note:'', alim:'alim', tests:[], measures:[], entityDesc:'', evidenzeVisive:'', highVoltage:false }],
     currentEnteIdx: 0,
     diagnosi: null,
     extraPhotos: []
