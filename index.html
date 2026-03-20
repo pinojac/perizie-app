@@ -835,7 +835,7 @@ Genera da 2 a 4 test pertinenti per questo ente. Per ente alimentato usa test di
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoint: 'models/gemini-2.5-flash:generateContent',
+        endpoint: 'models/gemini-2.0-flash:generateContent',
         body: { contents: [{ parts }] }
       })
     });
@@ -907,35 +907,55 @@ function renderTests() {
   });
 }
 
-// ---- GEMINI: GENERA IMMAGINE TEST ----
+// ---- GEMINI: GENERA DIAGRAMMA SVG ----
 async function generateTestImage(idx, prompt) {
+  const wrap = document.getElementById('imgWrap'+idx);
+  if (wrap) wrap.innerHTML = '<div class="test-img-placeholder">Generazione diagramma...</div>';
+
+  const svgPrompt = `Genera un diagramma SVG tecnico che mostri: ${prompt}
+
+REGOLE FONDAMENTALI:
+- Rispondi SOLO con codice SVG puro, senza markdown, senza backtick, senza testo prima o dopo
+- Il codice deve iniziare esattamente con <svg e finire con </svg>
+- viewBox="0 0 400 220", sfondo bianco, stile tecnico professionale
+- Usa rettangoli, cerchi, linee e testo per rappresentare l'ente e i puntali
+- Puntale ROSSO = colore #e53e3e, puntale NERO = colore #1a1a1a
+- Etichette in italiano, font-size minimo 11px, font-family sans-serif
+- Frecce direzionali per indicare dove posizionare i puntali
+- Massimo 15 elementi SVG, mantieni il diagramma semplice e leggibile`;
+
   try {
     const res = await fetch('/api/gemini', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoint: 'models/gemini-2.0-flash-preview-image-generation:generateContent',
-        body: {
-          contents: [{ parts: [{ text: `Technical schematic illustration, clean white background, labeled diagram showing: ${prompt}. Style: simple technical drawing, clear labels in Italian, professional.` }] }],
-          generationConfig: { responseModalities: ['TEXT','IMAGE'] }
-        }
+        endpoint: 'models/gemini-2.5-flash:generateContent',
+        body: { contents: [{ parts: [{ text: svgPrompt }] }] }
       })
     });
     const data = await res.json();
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const imgPart = parts.find(p => p.inlineData);
-    const wrap = document.getElementById('imgWrap'+idx);
-    if (imgPart && wrap) {
-      const img = document.createElement('img');
-      img.src = `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`;
-      wrap.innerHTML = '';
-      wrap.appendChild(img);
+    let svgText = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    svgText = svgText.replace(/```svg|```xml|```/g, '').trim();
+
+    const svgStart = svgText.indexOf('<svg');
+    const svgEnd = svgText.lastIndexOf('</svg>');
+    if (svgStart !== -1 && svgEnd !== -1) {
+      svgText = svgText.substring(svgStart, svgEnd + 6);
+    }
+
+    if (wrap && svgText.startsWith('<svg')) {
+      wrap.innerHTML = svgText;
+      const svgEl = wrap.querySelector('svg');
+      if (svgEl) {
+        svgEl.style.width = '100%';
+        svgEl.style.height = 'auto';
+        svgEl.style.display = 'block';
+      }
     } else if (wrap) {
-      wrap.querySelector('.test-img-placeholder').textContent = 'Immagine non disponibile per questo test';
+      wrap.innerHTML = '<div class="test-img-placeholder">Diagramma non disponibile</div>';
     }
   } catch(e) {
-    const wrap = document.getElementById('imgWrap'+idx);
-    if (wrap) wrap.querySelector('.test-img-placeholder').textContent = 'Immagine non disponibile';
+    if (wrap) wrap.innerHTML = '<div class="test-img-placeholder">Diagramma non disponibile</div>';
   }
 }
 
@@ -987,7 +1007,7 @@ JSON richiesto:
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        endpoint: 'models/gemini-2.5-flash:generateContent',
+        endpoint: 'models/gemini-2.0-flash:generateContent',
         body: { contents: [{ parts: [{ text: prompt }] }] }
       })
     });
