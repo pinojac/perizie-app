@@ -944,7 +944,16 @@ Struttura JSON richiesta:
   ]
 }
 
-Genera 2-4 test PERTINENTI all'accertamento del fenomeno elettrico assicurato. Escludi test che valutano solo funzionamento generico o danni meccanici non coperti.`;
+Genera 2-4 test PERTINENTI all'accertamento del fenomeno elettrico assicurato.
+
+VINCOLI STRUMENTI: Proponi SOLO test eseguibili con:
+- Multimetro digitale standard (tensione AC/DC, resistenza Ohm, continuità, diodo)
+- Ispezione visiva diretta
+- Verifica funzionale (accensione, risposta a comandi)
+NON proporre test che richiedono: Megger, Megaohmetro, oscilloscopio, pinza amperometrica di precisione, strumenti da laboratorio o attrezzature specialistiche.
+
+Per i test visivi o funzionali (unita: N/A), il campo wikiImageQuery deve essere null.
+Per i test con multimetro, wikiImageQuery deve descrivere il COMPONENTE SPECIFICO da cercare su Wikimedia Commons in inglese (es. "electrolytic capacitor terminals", "electric motor winding terminals", "ceramic fuse").`;
 
   const parts = [{ text: prompt }];
   photos.forEach(p => {
@@ -1001,14 +1010,24 @@ async function generateGuideSimplici(enteIdx) {
     const t = ente.tests[i];
 
     // 1. Genera guida semplice con temperatura 0.4
-    const promptGuida = `Sei un assistente per perizie elettriche. Per il seguente test, scrivi una spiegazione pratica per chi ha poca esperienza.
+    const isTestVisivo = t.unita === 'N/A' || t.unita === 'visivo' || t.unita === 'funzionale' || t.unita === 'visivo/funzionale';
+    const promptGuida = isTestVisivo
+      ? `Sei un assistente per perizie elettriche. Per il seguente test VISIVO O FUNZIONALE, scrivi una guida pratica su come eseguirlo per chi ha poca esperienza.
+
+Test: "${t.nome}"
+Istruzioni: "${t.istruzioni}"
+Ente: "${ente.entityDesc}"
+
+Scrivi 3-5 frasi dirette su COSA GUARDARE o COSA FARE fisicamente: dove guardare, cosa cercare, come muovere o azionare l'ente se necessario. NON menzionare puntali, multimetro o misurazioni — questo è un test visivo/funzionale. Usa descrizioni visive concrete (colori, forme, posizioni). Tono pratico e diretto.
+Rispondi con solo il testo della guida, senza JSON, senza titoli.`
+      : `Sei un assistente per perizie elettriche. Per il seguente test con MULTIMETRO, scrivi una guida pratica per chi ha poca esperienza.
 
 Test: "${t.nome}"
 Istruzioni tecniche: "${t.istruzioni}"
 Ente: "${ente.entityDesc}"
 Tipo: ${t.tipo === 'alim' ? 'ente alimentato' : 'ente non alimentato'}
 
-Scrivi 3-5 frasi dirette e pratiche. Usa il nome tecnico del componente seguito da una descrizione visiva concreta tra parentesi (es. "il fusibile (quel piccolo cilindro metallico con tappi bianchi)"). Indica dove mettere il puntale rosso e il puntale nero con riferimenti visivi precisi (posizione, colore, forma del punto di contatto). Tono pratico, non infantile, non eccessivamente tecnico.
+Scrivi 3-5 frasi dirette e pratiche. Usa il nome tecnico del componente seguito da una descrizione visiva (es. "il fusibile — quel piccolo cilindro metallico con tappi bianchi"). Indica con precisione dove posizionare il puntale ROSSO e il puntale NERO usando riferimenti visivi concreti (posizione, colore, forma). Tono pratico, non infantile.
 Rispondi con solo il testo della guida, senza JSON, senza titoli.`;
 
     try {
@@ -1163,7 +1182,7 @@ function renderTestPage(enteIdx) {
       '<div class="test-card-body">' +
         '<div class="test-instructions">' + t.istruzioni + '</div>' +
         '<div style="background:#e6f1fb;border-left:3px solid #1a3a5c;border-radius:0 8px 8px 0;padding:12px 14px;margin-top:2px;">' +
-          '<div style="font-size:11px;font-weight:600;color:#1a3a5c;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">👆 Dove mettere i puntali — guida semplice</div>' +
+          '<div style="font-size:11px;font-weight:600;color:#1a3a5c;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">📋 Come eseguire il test — guida semplice</div>' +
           '<div id="guidaSemplice_' + eIdx + '_' + i + '" style="font-size:13px;color:#1a3a5c;line-height:1.7;font-style:italic;opacity:0.6;">Generazione in corso...</div>' +
         '</div>' +
         '<div id="wikiImg_' + eIdx + '_' + i + '" style="margin-top:8px;"></div>' +
@@ -1520,43 +1539,45 @@ async function runDiagnosi() {
       unita: t.unita,
       valoreInserito: ente.measures[idx] || 'non misurato',
       valoriRiferimento: t.valoriAttesi,
-      motivoNonEffettuato: (!ente.measures[idx] || ente.measures[idx].trim() === '') && t.motivoNonEffettuato ? t.motivoNonEffettuato : null
+      motivoNonEffettuato: (!ente.measures[idx] || ente.measures[idx].trim() === '') && t.motivoNonEffettuato ? String(t.motivoNonEffettuato).trim() : null
     }));
 
-    const prompt = `Sei un perito elettrotecnico specializzato nell'accertamento di danni da fenomeni elettrici.
+    const prompt = `Sei un perito elettrotecnico specializzato nell'accertamento di danni da fenomeni elettrici per conto di compagnie assicurative.
 
-Il tuo compito è determinare:
-1. Se l'ente è danneggiato o guasto
-2. Se il danno è riconducibile a un fenomeno elettrico (sbalzo di tensione, sovratensione, fulminazione, cortocircuito, arco voltaico, induzione elettromagnetica)
-3. Oppure se il danno è riconducibile ad altre cause autonome NON elettriche (usura, rottura meccanica, fine vita, corrosione, urto fisico)
+PRINCIPIO FONDAMENTALE: L'onere di provare il danno elettrico ricade sull'assicurato, non sul perito. Il tuo compito è verificare se esistono elementi che COMPROVANO un danno di natura elettrica. In assenza di tali evidenze, la diagnosi è "nessuna evidenza riscontrata" — NON "incerto" o "non determinabile".
 
-NON fare mai riferimento a polizze assicurative, coperture o garanzie. La tua diagnosi si limita a stabilire la natura tecnica del danno e la sua causa probabile.
+LOGICA DIAGNOSI:
+- Evidenze positive di danno elettrico (bruciature, valori anomali coerenti con sovratensione/cortocircuito) → esito ELETTRICO
+- Evidenze di cause NON elettriche (usura, rottura meccanica) → esito NON_ELETTRICO
+- Nessuna evidenza di danno elettrico nei test effettuati → esito NON_ELETTRICO, anche se alcuni test non sono stati eseguiti
+- NON_DETERMINABILE SOLO se i risultati sono genuinamente contraddittori, NON per mancanza di test
 
-Per i test non effettuati (valore "non misurato"), valuta il loro peso diagnostico rispetto ai test eseguiti. Se i test eseguiti sono sufficientemente significativi, esprimi comunque una diagnosi indicando che test aggiuntivi potrebbero fornire conferma ulteriore.
+TEST NON EFFETTUATI: Se un test non è stato eseguito per un motivo dichiarato dal perito (campo motivoNonEffettuato), riportalo nella motivazione come: "Il test [nome] non è stato eseguito in quanto [motivazione]." La mancanza di test per causa dichiarata NON deve portare a una diagnosi di incertezza — la diagnosi si basa sui test effettuati.
 
 Ente: ${ente.entityDesc}
 Stato: ${ente.alim === 'alim' ? 'alimentato' : 'non alimentato'}
 Note operatore: ${ente.note || 'nessuna'}
 Evidenze visive: ${ente.evidenzeVisive || 'nessuna'}
-Misurazioni: ${JSON.stringify(testsJSON)}
+Misurazioni e motivazioni: ${JSON.stringify(testsJSON)}
 
 Rispondi SOLO con JSON valido, senza markdown, senza backtick:
 {
   "esito": "ELETTRICO|NON_ELETTRICO|NON_DETERMINABILE",
-  "danno": true/false (true se l'ente risulta danneggiato, indipendentemente dalla causa),
-  "titoloDiagnosi": "titolo tecnico preciso (es. 'Danno da sovratensione confermato', 'Guasto da usura meccanica', 'Nessuna evidenza di danno elettrico rilevata', 'Elementi parziali — test aggiuntivi consigliati')",
-  "motivazione": "spiegazione tecnica dettagliata: stato dell'ente, cosa indicano le misurazioni, qual è la causa più probabile del danno. Se alcuni test non sono stati effettuati, indica quali ulteriori accertamenti potrebbero rafforzare la diagnosi. Non fare mai riferimento a polizze o coperture assicurative.",
-  "causaProbabile": "causa tecnica più probabile (es. 'Sovratensione transitoria', 'Usura degli avvolgimenti', 'Cortocircuito interno', 'Rottura meccanica', 'Nessun danno rilevato')",
-  "testNonEffettuati": "elenco dei test non effettuati e loro rilevanza diagnostica, oppure null se tutti eseguiti",
+  "danno": true/false (true SOLO se ci sono evidenze positive di danno elettrico),
+  "titoloDiagnosi": "titolo tecnico preciso es: 'Danno da sovratensione confermato', 'Nessuna evidenza di danno elettrico riscontrata', 'Guasto da causa meccanica — nessun fenomeno elettrico evidenziato'",
+  "motivazione": "Spiegazione tecnica chiara. Per ogni test non effettuato con motivazione dichiarata, scrivi: 'Il test [nome] non è stato eseguito in quanto [motivazione dichiarata].' Se esito NON_ELETTRICO con test mancanti motivati, concludi con: 'Sarà possibile rivalutare la sussistenza di danni elettrici qualora fosse reso disponibile eseguire i test non effettuati.' Non fare riferimento a polizze.",
+  "causaProbabile": "causa tecnica più probabile es: 'Sovratensione transitoria', 'Nessun danno elettrico evidenziato', 'Guasto meccanico', 'Usura'",
+  "testNonEffettuati": "stringa leggibile con nome test e motivazione per ogni test non eseguito, oppure null",
   "risultati": [
     {
       "nome": "nome del test",
       "valore": "valore inserito con unità",
       "stato": "ok|anomalo|nd",
-      "nota": "commento tecnico sul valore e cosa indica rispetto alla natura del danno"
+      "nota": "commento su cosa indica rispetto all'ipotesi di danno elettrico"
     }
   ]
 }`;
+
 
     try {
       const res = await fetch('/api/gemini', {
