@@ -1035,24 +1035,25 @@ Rispondi con solo il testo della guida, senza JSON, senza titoli.`;
     // 2. Cerca immagine su Wikimedia Commons
     if (t.wikiImageQuery) {
       try {
-        const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(t.wikiImageQuery)}&gsrlimit=3&prop=imageinfo&iiprop=url|mime&iiurlwidth=400&format=json&origin=*`;
+        // Usa Wikimedia Commons (non Wikipedia)
+        const wikiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(t.wikiImageQuery)}&gsrlimit=5&prop=imageinfo&iiprop=url|mime|thumburl&iiurlwidth=400&format=json&origin=*`;
         const wikiRes = await fetch(wikiUrl);
         const wikiData = await wikiRes.json();
         const pages = Object.values(wikiData.query?.pages || {});
+        // Filtra solo immagini (no SVG, no audio, no video)
         const imgPage = pages.find(p => {
+          const url = p.imageinfo?.[0]?.url || '';
           const mime = p.imageinfo?.[0]?.mime || '';
-          return mime.startsWith('image/') && !mime.includes('svg');
+          return mime.startsWith('image/jpeg') || mime.startsWith('image/png') || mime.startsWith('image/webp');
         });
-        const imgUrl = imgPage?.imageinfo?.[0]?.thumburl || null;
+        const imgInfo = imgPage?.imageinfo?.[0];
+        const imgUrl = imgInfo?.thumburl || imgInfo?.url || null;
 
         if (imgUrl) {
           ente.tests[i].wikiImageUrl = imgUrl;
-          const imgWrap = document.getElementById(`wikiImg_${enteIdx}_${i}`);
+          const imgWrap = document.getElementById('wikiImg_' + enteIdx + '_' + i);
           if (imgWrap) {
-            imgWrap.innerHTML = `
-              <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;">📷 Esempio del componente:</div>
-              <img src="${imgUrl}" style="width:100%;max-height:180px;object-fit:contain;border-radius:6px;background:#f8f9fb;"
-                onerror="this.parentElement.style.display='none'" />`;
+            imgWrap.innerHTML = '<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;">📷 Esempio del componente:</div><img src="' + imgUrl + '" style="width:100%;max-height:180px;object-fit:contain;border-radius:6px;background:#f8f9fb;" onerror="this.parentElement.style.display='none'" />';
           }
         }
       } catch(e) {
@@ -1159,12 +1160,13 @@ function renderTestPage(enteIdx) {
             oninput="state.enti[${eIdx}].measures[${i}]=this.value" />
           <button onclick="setOLEnte(${eIdx},${i})" style="padding:9px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Over Limit / circuito aperto">OL</button>
           <button onclick="setMIEnte(${eIdx},${i})" style="padding:9px 8px;background:#854f0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Misure instabili / fluttuanti">≈</button>
-          ${t.rispostaDinamica ? `<button id="dynBtn_${eIdx}_${i}" style="padding:9px 8px;background:#1d9e75;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="${t.rispostaDinamica}">↗ OK</button>` : ''}
+          <span id="dynBtnPlaceholder_${eIdx}_${i}"></span>
           <div class="measure-unit">${t.unita}</div>
         </div>
         <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px;line-height:1.7;">
           <span style="font-weight:600;color:var(--color-text-primary);">OL</span> = circuito aperto / fuori scala &nbsp;·&nbsp;
-          <span style="font-weight:600;color:var(--color-text-primary);">≈</span> = misure instabili/fluttuanti${t.rispostaDinamica ? ` &nbsp;·&nbsp; <span style="font-weight:600;color:#1d9e75;">↗ OK</span> = ${t.rispostaDinamica}` : ''}
+          <span style="font-weight:600;color:var(--color-text-primary);">≈</span> = misure instabili/fluttuanti
+          <span id="legendaDinamica_${eIdx}_${i}"></span>
         </div>
         <div id="motivoWrap_${eIdx}_${i}" style="display:none;margin-top:8px;">
           <textarea id="motivo_${eIdx}_${i}"
@@ -1177,16 +1179,25 @@ function renderTestPage(enteIdx) {
     `;
     wrap.appendChild(card);
 
-    // Collega il pulsante dinamica se presente
+    // Inserisce pulsante dinamico e legenda tramite JS (evita template literal annidati)
     if (t.rispostaDinamica) {
-      const dynBtn = card.querySelector(`#dynBtn_${eIdx}_${i}`);
-      if (dynBtn) {
+      const placeholder = document.getElementById('dynBtnPlaceholder_' + eIdx + '_' + i);
+      if (placeholder) {
+        const dynBtn = document.createElement('button');
+        dynBtn.style.cssText = 'padding:9px 8px;background:#1d9e75;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;';
+        dynBtn.title = t.rispostaDinamica;
+        dynBtn.textContent = '↗ OK';
         const desc = t.rispostaDinamica;
         dynBtn.addEventListener('click', () => {
           const input = document.getElementById('measure_' + eIdx + '_' + i);
           if (input) { input.value = desc; state.enti[eIdx].measures[i] = desc; }
           toggleMotivoWrap(eIdx, i);
         });
+        placeholder.appendChild(dynBtn);
+      }
+      const legendaSpan = document.getElementById('legendaDinamica_' + eIdx + '_' + i);
+      if (legendaSpan) {
+        legendaSpan.innerHTML = ' &nbsp;·&nbsp; <span style="font-weight:600;color:#1d9e75;">↗ OK</span> = ' + t.rispostaDinamica;
       }
     }
 
@@ -1196,6 +1207,8 @@ function renderTestPage(enteIdx) {
       measureInput.addEventListener('input', () => toggleMotivoWrap(eIdx, i));
       measureInput.addEventListener('change', () => toggleMotivoWrap(eIdx, i));
     }
+    // Mostra subito se misura è vuota al render iniziale
+    toggleMotivoWrap(eIdx, i);
 
     // Pulsanti visivi N/A — aggiungi listener per toggleMotivo
     ['ok','ko','nv'].forEach(k => {
