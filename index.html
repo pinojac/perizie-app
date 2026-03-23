@@ -1037,34 +1037,39 @@ Rispondi con solo il testo della guida, senza JSON, senza titoli.`;
       console.error('Errore guida semplice:', e);
     }
 
-    // 2. Cerca immagine su Wikimedia Commons
-    if (t.wikiImageQuery) {
-      try {
-        // Usa Wikimedia Commons (non Wikipedia)
-        const wikiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(t.wikiImageQuery)}&gsrlimit=5&prop=imageinfo&iiprop=url|mime|thumburl&iiurlwidth=400&format=json&origin=*`;
-        const wikiRes = await fetch(wikiUrl);
-        const wikiData = await wikiRes.json();
-        const pages = Object.values(wikiData.query?.pages || {});
-        // Filtra solo immagini (no SVG, no audio, no video)
-        const imgPage = pages.find(p => {
-          const url = p.imageinfo?.[0]?.url || '';
-          const mime = p.imageinfo?.[0]?.mime || '';
-          return mime.startsWith('image/jpeg') || mime.startsWith('image/png') || mime.startsWith('image/webp');
-        });
-        const imgInfo = imgPage?.imageinfo?.[0];
-        const imgUrl = imgInfo?.thumburl || imgInfo?.url || null;
-
-        if (imgUrl) {
-          ente.tests[i].wikiImageUrl = imgUrl;
-          const imgWrap = document.getElementById('wikiImg_' + enteIdx + '_' + i);
-          if (imgWrap) {
-            imgWrap.innerHTML = '<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;">📷 Esempio del componente:</div><img src="' + imgUrl + '" style="width:100%;max-height:180px;object-fit:contain;border-radius:6px;background:#f8f9fb;" onerror="this.parentElement.style.display=\'none\'" />';
-          }
-        }
-      } catch(e) {
-        console.error('Errore Wikimedia:', e);
-      }
-    }
+     // 2. Cerca immagine su Wikimedia Commons
+     const wikiQuery = t.wikiImageQuery || null;
+     if (wikiQuery) {
+       try {
+         const wikiUrl = 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=' + encodeURIComponent(wikiQuery) + '&gsrlimit=10&prop=imageinfo&iiprop=url|mime|thumburl&iiurlwidth=400&format=json&origin=*';
+         const wikiRes = await fetch(wikiUrl);
+         const wikiData = await wikiRes.json();
+         const pages = Object.values((wikiData.query && wikiData.query.pages) || {});
+         const imgPage = pages.find(function(p) {
+           const mime = (p.imageinfo && p.imageinfo[0]) ? (p.imageinfo[0].mime || '') : '';
+           return mime.startsWith('image/jpeg') || mime.startsWith('image/png') || mime.startsWith('image/webp');
+         });
+         const imgInfo = (imgPage && imgPage.imageinfo) ? imgPage.imageinfo[0] : null;
+         const imgUrl = imgInfo ? (imgInfo.thumburl || imgInfo.url || null) : null;
+         if (imgUrl) {
+           const imgWrap = document.getElementById('wikiImg_' + enteIdx + '_' + i);
+           if (imgWrap) {
+             const caption = document.createElement('div');
+             caption.style.cssText = 'font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;';
+             caption.textContent = '📷 Esempio del componente:';
+             const img = document.createElement('img');
+             img.src = imgUrl;
+             img.style.cssText = 'width:100%;max-height:180px;object-fit:contain;border-radius:6px;background:#f8f9fb;';
+             img.onerror = function() { imgWrap.style.display = 'none'; };
+             imgWrap.innerHTML = '';
+             imgWrap.appendChild(caption);
+             imgWrap.appendChild(img);
+           }
+         }
+       } catch(e) {
+         console.error('Errore Wikimedia test ' + i, e);
+       }
+     }
   }
 }
 
@@ -1080,10 +1085,9 @@ function renderTestPage(enteIdx) {
   // Titolo ente
   const titleDiv = document.createElement('div');
   titleDiv.style.cssText = 'margin-bottom:16px;';
-  titleDiv.innerHTML = `
-        '<div class="page-title">' + (state.enti.length > 1 ? 'Ente ' + (enteIdx+1) + ' \u2014 ' + (ente.entityDesc || 'Test') : 'Esegui i test') + '</div>' +
-    <div class="page-sub">${ente.entityDesc || 'Segui le istruzioni e inserisci i valori misurati.'}</div>
-  `;
+  const pageTitle = state.enti.length > 1 ? ('Ente ' + (enteIdx+1) + ' — ' + (ente.entityDesc || 'Test')) : 'Esegui i test';
+  titleDiv.innerHTML = '<div class="page-title">' + pageTitle + '</div>' +
+    '<div class="page-sub">' + (ente.entityDesc || 'Segui le istruzioni e inserisci i valori misurati.') + '</div>';
   container.appendChild(titleDiv);
 
   // Evidenze visive rilevate dall'AI
@@ -1628,7 +1632,7 @@ function renderDiagnosi() {
       ? '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;opacity:0.7;">Causa probabile: ' + d.causaProbabile + '</div>'
       : '';
     const testNonHtml = d.testNonEffettuati
-      ? '<div style="margin-top:10px;padding:10px 12px;background:rgba(0,0,0,0.05);border-radius:6px;font-size:12px;opacity:0.8;"><strong>Test non effettuati:</strong> ' + d.testNonEffettuati + '</div>'
+      ? '<div style="margin-top:10px;padding:10px 12px;background:rgba(0,0,0,0.05);border-radius:6px;font-size:12px;opacity:0.8;"><strong>Test non effettuati:</strong> ' + (Array.isArray(d.testNonEffettuati) ? d.testNonEffettuati.join(', ') : String(d.testNonEffettuati)) + '</div>'
       : '';
     const risultatiHtml = (d.risultati || []).map(function(r) {
       return '<div class="result-row"><span class="result-name">' + r.nome + '</span><span class="result-val rv-' + r.stato + '">' + r.valore + '</span></div>';
