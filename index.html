@@ -778,7 +778,7 @@ function updateProgressBar(currentPage, total) {
   let label = labels[currentPage] || '';
   if (currentPage >= 3 && currentPage < diagnosiPage()) {
     const enteIdx = currentPage - 3;
-    label = state.enti.length > 1 ? `Ente ${enteIdx+1} di ${state.enti.length}` : 'Test';
+    label = state.enti.length > 1 ? ('Ente ' + (currentPage - 2) + ' di ' + state.enti.length) : 'Test';
   } else if (currentPage === diagnosiPage()) {
     label = 'Diagnosi';
   }
@@ -804,44 +804,49 @@ function renderEntiList() {
   state.enti.forEach((ente, idx) => {
     const div = document.createElement('div');
     div.style.cssText = 'border:1px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px;margin-bottom:14px;background:var(--color-background-primary);';
-    div.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <div style="font-size:15px;font-weight:500;color:var(--color-text-primary);">
-          ${state.enti.length > 1 ? `Ente ${idx+1}` : 'Ente da analizzare'}
-        </div>
-        ${state.enti.length > 1 ? `<button onclick="removeEnte(${idx})" style="background:none;border:none;color:var(--color-text-secondary);font-size:18px;cursor:pointer;padding:0 4px;">×</button>` : ''}
-      </div>
-      <div style="margin-bottom:10px;">
-        <div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;">Foto (almeno 1, fino a 3)</div>
-        <div class="photo-grid">
-          ${[0,1,2].map(pi => `
-            <div class="photo-slot ${ente.photos[pi] ? 'has-photo' : ''}" id="slot_${idx}_${pi}" onclick="choosePhoto(${idx},${pi})">
-              ${ente.photos[pi] ? `<img src="${ente.photos[pi]}" />` : `<div class="slot-plus">+</div><div class="slot-lbl">Foto ${pi+1}</div>`}
-              <button class="del-btn" onclick="delPhoto(event,${idx},${pi})">×</button>
-            </div>`).join('')}
-        </div>
-        <input type="file" id="f_${idx}_0" accept="image/*" capture="environment" onchange="loadPhoto(${idx},0,this)">
-        <input type="file" id="f_${idx}_0g" accept="image/*" onchange="loadPhoto(${idx},0,this)">
-        <input type="file" id="f_${idx}_1" accept="image/*" capture="environment" onchange="loadPhoto(${idx},1,this)">
-        <input type="file" id="f_${idx}_1g" accept="image/*" onchange="loadPhoto(${idx},1,this)">
-        <input type="file" id="f_${idx}_2" accept="image/*" capture="environment" onchange="loadPhoto(${idx},2,this)">
-        <input type="file" id="f_${idx}_2g" accept="image/*" onchange="loadPhoto(${idx},2,this)">
-      </div>
-      <div style="margin-bottom:10px;">
-        <div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;">Note per l'AI (facoltativo)</div>
-        <textarea style="width:100%;padding:10px 12px;border:1.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:14px;color:var(--color-text-primary);background:var(--color-background-primary);resize:none;min-height:64px;outline:none;" 
-          placeholder="es. L'assicurato riferisce cali di tensione..." 
-          onchange="state.enti[${idx}].note=this.value" 
-          oninput="state.enti[${idx}].note=this.value">${ente.note}</textarea>
-      </div>
-      <div>
-        <div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;">Stato durante i test</div>
-        <div class="toggle-group">
-          <button class="toggle-btn ${ente.alim==='alim'?'on':''}" onclick="setAlimEnte(${idx},'alim')">⚡ Alimentato</button>
-          <button class="toggle-btn ${ente.alim==='noalim'?'on':''}" onclick="setAlimEnte(${idx},'noalim')">○ Non alimentato</button>
-        </div>
-      </div>
-    `;
+    const enteTitle = state.enti.length > 1 ? 'Ente ' + (idx+1) : 'Ente da analizzare';
+    const removeBtnHtml = state.enti.length > 1
+      ? '<button onclick="removeEnte(' + idx + ')" style="background:none;border:none;color:var(--color-text-secondary);font-size:18px;cursor:pointer;padding:0 4px;">×</button>'
+      : '';
+    const photosHtml = [0,1,2].map(function(pi) {
+      const cls = ente.photos[pi] ? 'has-photo' : '';
+      const inner = ente.photos[pi]
+        ? '<img src="' + ente.photos[pi] + '" />'
+        : '<div class="slot-plus">+</div><div class="slot-lbl">Foto ' + (pi+1) + '</div>';
+      return '<div class="photo-slot ' + cls + '" id="slot_' + idx + '_' + pi + '" onclick="choosePhoto(' + idx + ',' + pi + ')">' + inner + '<button class="del-btn" onclick="delPhoto(event,' + idx + ',' + pi + ')">×</button></div>';
+    }).join('');
+    const alimOn = ente.alim === 'alim' ? 'on' : '';
+    const noalimOn = ente.alim === 'noalim' ? 'on' : '';
+    div.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">' +
+        '<div style="font-size:15px;font-weight:500;color:var(--color-text-primary);">' + enteTitle + '</div>' +
+        removeBtnHtml +
+      '</div>' +
+      '<div style="margin-bottom:10px;">' +
+        '<div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;">Foto (almeno 1, fino a 3)</div>' +
+        '<div class="photo-grid">' + photosHtml + '</div>' +
+        '<input type="file" id="f_' + idx + '_0" accept="image/*" capture="environment" onchange="loadPhoto(' + idx + ',0,this)">' +
+        '<input type="file" id="f_' + idx + '_0g" accept="image/*" onchange="loadPhoto(' + idx + ',0,this)">' +
+        '<input type="file" id="f_' + idx + '_1" accept="image/*" capture="environment" onchange="loadPhoto(' + idx + ',1,this)">' +
+        '<input type="file" id="f_' + idx + '_1g" accept="image/*" onchange="loadPhoto(' + idx + ',1,this)">' +
+        '<input type="file" id="f_' + idx + '_2" accept="image/*" capture="environment" onchange="loadPhoto(' + idx + ',2,this)">' +
+        '<input type="file" id="f_' + idx + '_2g" accept="image/*" onchange="loadPhoto(' + idx + ',2,this)">' +
+      '</div>' +
+      '<div style="margin-bottom:10px;">' +
+        '<div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;">Note per l'AI (facoltativo)</div>' +
+        '<textarea style="width:100%;padding:10px 12px;border:1.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:14px;color:var(--color-text-primary);background:var(--color-background-primary);resize:none;min-height:64px;outline:none;" ' +
+        'placeholder="es. L'assicurato riferisce cali di tensione..." ' +
+        'onchange="state.enti[' + idx + '].note=this.value" ' +
+        'oninput="state.enti[' + idx + '].note=this.value">' + ente.note + '</textarea>' +
+      '</div>' +
+      '<div>' +
+        '<div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;">Stato durante i test</div>' +
+        '<div class="toggle-group">' +
+          '<button class="toggle-btn ' + alimOn + '" onclick="setAlimEnte(' + idx + ','alim')">⚡ Alimentato</button>' +
+          '<button class="toggle-btn ' + noalimOn + '" onclick="setAlimEnte(' + idx + ','noalim')">○ Non alimentato</button>' +
+        '</div>' +
+      '</div>';
+
     list.appendChild(div);
   });
 }
@@ -1076,7 +1081,7 @@ function renderTestPage(enteIdx) {
   const titleDiv = document.createElement('div');
   titleDiv.style.cssText = 'margin-bottom:16px;';
   titleDiv.innerHTML = `
-    <div class="page-title">${state.enti.length > 1 ? `Ente ${enteIdx+1} — ${ente.entityDesc || 'Test'}` : 'Esegui i test'}</div>
+        '<div class="page-title">' + (state.enti.length > 1 ? 'Ente ' + (enteIdx+1) + ' \u2014 ' + (ente.entityDesc || 'Test') : 'Esegui i test') + '</div>' +
     <div class="page-sub">${ente.entityDesc || 'Segui le istruzioni e inserisci i valori misurati.'}</div>
   `;
   container.appendChild(titleDiv);
@@ -1121,62 +1126,47 @@ function renderTestPage(enteIdx) {
     const card = document.createElement('div');
     card.className = 'test-card';
     const eIdx = enteIdx;
-    card.innerHTML = `
-      <div class="test-card-header">
-        <div class="test-card-title">Test ${i+1} — ${t.nome}</div>
-        <span class="test-badge ${badgeClass}">${badgeTxt}</span>
-      </div>
-      <div class="test-card-body">
-        <div class="test-instructions">${t.istruzioni}</div>
-        <div style="background:#e6f1fb;border-left:3px solid #1a3a5c;border-radius:0 8px 8px 0;padding:12px 14px;margin-top:2px;">
-          <div style="font-size:11px;font-weight:600;color:#1a3a5c;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">👆 Dove mettere i puntali — guida semplice</div>
-          <div id="guidaSemplice_${eIdx}_${i}" style="font-size:13px;color:#1a3a5c;line-height:1.7;font-style:italic;opacity:0.6;">Generazione in corso...</div>
-        </div>
-        <div id="wikiImg_${eIdx}_${i}" style="margin-top:8px;"></div>
-        <div class="expected-values">
-          <strong>Valori di riferimento</strong>
-          ${t.valoriAttesi}
-        </div>
-        ${t.unita === 'N/A' || t.unita === 'visivo' || t.unita === 'funzionale' || t.unita === 'visivo/funzionale' ? `
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
-          <button onclick="setMeasureEnte(${eIdx},${i},'Nessuna anomalia rilevata')" id="btn_ok_${eIdx}_${i}"
-            style="width:100%;padding:11px;border:1.5px solid #1d9e75;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:#1d9e75;text-align:left;transition:all 0.2s;">
-            ✓ Nessuna anomalia rilevata
-          </button>
-          <button onclick="setMeasureEnte(${eIdx},${i},'Anomalia rilevata come descritta')" id="btn_ko_${eIdx}_${i}"
-            style="width:100%;padding:11px;border:1.5px solid #e24b4a;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:#e24b4a;text-align:left;transition:all 0.2s;">
-            ✗ Anomalia rilevata come descritta
-          </button>
-          <button onclick="setMeasureEnte(${eIdx},${i},'Non verificabile')" id="btn_nv_${eIdx}_${i}"
-            style="width:100%;padding:11px;border:1.5px solid var(--color-border-secondary);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:var(--color-text-secondary);text-align:left;transition:all 0.2s;">
-            — Non verificabile
-          </button>
-          <input type="hidden" id="measure_${eIdx}_${i}" />
-        </div>` : `
-        <div class="measure-row">
-          <input type="text" inputmode="decimal" placeholder="Inserisci valore"
-            id="measure_${eIdx}_${i}"
-            onchange="state.enti[${eIdx}].measures[${i}]=this.value"
-            oninput="state.enti[${eIdx}].measures[${i}]=this.value" />
-          <button onclick="setOLEnte(${eIdx},${i})" style="padding:9px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Over Limit / circuito aperto">OL</button>
-          <button onclick="setMIEnte(${eIdx},${i})" style="padding:9px 8px;background:#854f0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Misure instabili / fluttuanti">≈</button>
-          <span id="dynBtnPlaceholder_${eIdx}_${i}"></span>
-          <div class="measure-unit">${t.unita}</div>
-        </div>
-        <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px;line-height:1.7;">
-          <span style="font-weight:600;color:var(--color-text-primary);">OL</span> = circuito aperto / fuori scala &nbsp;·&nbsp;
-          <span style="font-weight:600;color:var(--color-text-primary);">≈</span> = misure instabili/fluttuanti
-          <span id="legendaDinamica_${eIdx}_${i}"></span>
-        </div>
-        <div id="motivoWrap_${eIdx}_${i}" style="display:none;margin-top:8px;">
-          <textarea id="motivo_${eIdx}_${i}"
-            placeholder="Motivo test non effettuato (facoltativo) — es. impossibile aprire il coperchio senza danneggiare l'ente"
-            style="width:100%;padding:9px 12px;border:1.5px dashed var(--color-border-secondary);border-radius:8px;font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary);background:var(--color-background-secondary);resize:none;min-height:60px;outline:none;"
-            onchange="state.enti[${eIdx}].tests[${i}].motivoNonEffettuato=this.value"
-            oninput="state.enti[${eIdx}].tests[${i}].motivoNonEffettuato=this.value"></textarea>
-        </div>`}
-      </div>
-    `;
+    // Costruisce la sezione misure senza template literal annidati
+    const isVisivo = t.unita === 'N/A' || t.unita === 'visivo' || t.unita === 'funzionale' || t.unita === 'visivo/funzionale';
+    const misureHtml = isVisivo
+      ? '<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">' +
+        '<button onclick="setMeasureEnte(' + eIdx + ',' + i + ','Nessuna anomalia rilevata')" id="btn_ok_' + eIdx + '_' + i + '" style="width:100%;padding:11px;border:1.5px solid #1d9e75;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:#1d9e75;text-align:left;">✓ Nessuna anomalia rilevata</button>' +
+        '<button onclick="setMeasureEnte(' + eIdx + ',' + i + ','Anomalia rilevata come descritta')" id="btn_ko_' + eIdx + '_' + i + '" style="width:100%;padding:11px;border:1.5px solid #e24b4a;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:#e24b4a;text-align:left;">✗ Anomalia rilevata come descritta</button>' +
+        '<button onclick="setMeasureEnte(' + eIdx + ',' + i + ','Non verificabile')" id="btn_nv_' + eIdx + '_' + i + '" style="width:100%;padding:11px;border:1.5px solid var(--color-border-secondary);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:var(--color-text-secondary);text-align:left;">— Non verificabile</button>' +
+        '<input type="hidden" id="measure_' + eIdx + '_' + i + '" /></div>'
+      : '<div class="measure-row">' +
+        '<input type="text" inputmode="decimal" placeholder="Inserisci valore" id="measure_' + eIdx + '_' + i + '" onchange="state.enti[' + eIdx + '].measures[' + i + ']=this.value" oninput="state.enti[' + eIdx + '].measures[' + i + ']=this.value" />' +
+        '<button onclick="setOLEnte(' + eIdx + ',' + i + ')" style="padding:9px 12px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Over Limit / circuito aperto">OL</button>' +
+        '<button onclick="setMIEnte(' + eIdx + ',' + i + ')" style="padding:9px 8px;background:#854f0b;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Misure instabili / fluttuanti">≈</button>' +
+        '<span id="dynBtnPlaceholder_' + eIdx + '_' + i + '"></span>' +
+        '<div class="measure-unit">' + t.unita + '</div></div>' +
+        '<div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px;line-height:1.7;">' +
+        '<span style="font-weight:600;color:var(--color-text-primary);">OL</span> = circuito aperto / fuori scala &nbsp;·&nbsp;' +
+        '<span style="font-weight:600;color:var(--color-text-primary);">≈</span> = misure instabili/fluttuanti' +
+        '<span id="legendaDinamica_' + eIdx + '_' + i + '"></span></div>';
+
+    const motivoHtml = '<div id="motivoWrap_' + eIdx + '_' + i + '" style="display:none;margin-top:8px;">' +
+      '<textarea id="motivo_' + eIdx + '_' + i + '" placeholder="Motivo test non effettuato (facoltativo)" ' +
+      'style="width:100%;padding:9px 12px;border:1.5px dashed var(--color-border-secondary);border-radius:8px;font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary);background:var(--color-background-secondary);resize:none;min-height:60px;outline:none;" ' +
+      'onchange="state.enti[' + eIdx + '].tests[' + i + '].motivoNonEffettuato=this.value" ' +
+      'oninput="state.enti[' + eIdx + '].tests[' + i + '].motivoNonEffettuato=this.value"></textarea></div>';
+
+    card.innerHTML =
+      '<div class="test-card-header">' +
+        '<div class="test-card-title">Test ' + (i+1) + ' — ' + t.nome + '</div>' +
+        '<span class="test-badge ' + badgeClass + '">' + badgeTxt + '</span>' +
+      '</div>' +
+      '<div class="test-card-body">' +
+        '<div class="test-instructions">' + t.istruzioni + '</div>' +
+        '<div style="background:#e6f1fb;border-left:3px solid #1a3a5c;border-radius:0 8px 8px 0;padding:12px 14px;margin-top:2px;">' +
+          '<div style="font-size:11px;font-weight:600;color:#1a3a5c;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">👆 Dove mettere i puntali — guida semplice</div>' +
+          '<div id="guidaSemplice_' + eIdx + '_' + i + '" style="font-size:13px;color:#1a3a5c;line-height:1.7;font-style:italic;opacity:0.6;">Generazione in corso...</div>' +
+        '</div>' +
+        '<div id="wikiImg_' + eIdx + '_' + i + '" style="margin-top:8px;"></div>' +
+        '<div class="expected-values"><strong>Valori di riferimento</strong>' + t.valoriAttesi + '</div>' +
+        misureHtml +
+        motivoHtml +
+      '</div>';
     wrap.appendChild(card);
 
     // Inserisce pulsante dinamico e legenda tramite JS (evita template literal annidati)
@@ -1606,7 +1596,7 @@ function renderDiagnosi() {
   diagnosi.forEach((d, idx) => {
     const ente = state.enti[idx];
     const isPos = d.danno;
-    const enteLabel = state.enti.length > 1 ? `Ente ${idx+1} — ${ente.entityDesc || ''}` : ente.entityDesc || '';
+    const enteLabel = state.enti.length > 1 ? ('Ente ' + (idx+1) + ' \u2014 ' + (ente.entityDesc || '')) : (ente.entityDesc || '');
 
     // Determina classe CSS e icona in base all'esito
     const esito = d.esito || (d.danno ? 'ELETTRICO' : 'NON_ELETTRICO');
@@ -1627,29 +1617,38 @@ function renderDiagnosi() {
 
     const section = document.createElement('div');
     section.style.cssText = 'margin-bottom:20px;';
-    section.innerHTML = `
-      ${state.enti.length > 1 ? `<div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">${enteLabel}</div>` : ''}
-      <div class="diagnosi-card ${cardClass}" ${esito === 'NON_DETERMINABILE' ? 'style="background:#fff8e6;border:2px solid #f5c460;"' : ''}>
-        <div class="diagnosi-header">
-          <div class="diagnosi-icon" ${esito === 'NON_DETERMINABILE' ? 'style="background:#e8a020;"' : ''}>${iconSymbol}</div>
-          <div>
-            <div class="diagnosi-title" ${esito === 'NON_DETERMINABILE' ? 'style="color:#7a4f00;"' : ''}>${d.titoloDiagnosi}</div>
-            <div class="diagnosi-subtitle">Pratica ${state.id} — ${new Date().toLocaleDateString('it-IT')}</div>
-          </div>
-        </div>
-        ${d.causaProbabile ? `<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;opacity:0.7;">Causa probabile: ${d.causaProbabile}</div>` : ''}
-        <div class="diagnosi-text" ${esito === 'NON_DETERMINABILE' ? 'style="color:#7a4f00;"' : ''}>${d.motivazione}</div>
-        ${d.testNonEffettuati ? `<div style="margin-top:10px;padding:10px 12px;background:rgba(0,0,0,0.05);border-radius:6px;font-size:12px;opacity:0.8;"><strong>Test non effettuati:</strong> ${d.testNonEffettuati}</div>` : ''}
-      </div>
-      <div style="margin-top:8px;">
-        ${(d.risultati || []).map(r => `
-          <div class="result-row">
-            <span class="result-name">${r.nome}</span>
-            <span class="result-val rv-${r.stato}">${r.valore}</span>
-          </div>
-        `).join('')}
-      </div>
-    `;
+    const enteLabelHtml = state.enti.length > 1
+      ? '<div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;">' + enteLabel + '</div>'
+      : '';
+    const nonDetStyle = esito === 'NON_DETERMINABILE' ? 'style="background:#fff8e6;border:2px solid #f5c460;"' : '';
+    const iconStyle = esito === 'NON_DETERMINABILE' ? 'style="background:#e8a020;"' : '';
+    const titleStyle = esito === 'NON_DETERMINABILE' ? 'style="color:#7a4f00;"' : '';
+    const textStyle = esito === 'NON_DETERMINABILE' ? 'style="color:#7a4f00;"' : '';
+    const causaHtml = d.causaProbabile
+      ? '<div style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;opacity:0.7;">Causa probabile: ' + d.causaProbabile + '</div>'
+      : '';
+    const testNonHtml = d.testNonEffettuati
+      ? '<div style="margin-top:10px;padding:10px 12px;background:rgba(0,0,0,0.05);border-radius:6px;font-size:12px;opacity:0.8;"><strong>Test non effettuati:</strong> ' + d.testNonEffettuati + '</div>'
+      : '';
+    const risultatiHtml = (d.risultati || []).map(function(r) {
+      return '<div class="result-row"><span class="result-name">' + r.nome + '</span><span class="result-val rv-' + r.stato + '">' + r.valore + '</span></div>';
+    }).join('');
+    section.innerHTML =
+      enteLabelHtml +
+      '<div class="diagnosi-card ' + cardClass + '" ' + nonDetStyle + '>' +
+        '<div class="diagnosi-header">' +
+          '<div class="diagnosi-icon" ' + iconStyle + '>' + iconSymbol + '</div>' +
+          '<div>' +
+            '<div class="diagnosi-title" ' + titleStyle + '>' + d.titoloDiagnosi + '</div>' +
+            '<div class="diagnosi-subtitle">Pratica ' + state.id + ' — ' + new Date().toLocaleDateString('it-IT') + '</div>' +
+          '</div>' +
+        '</div>' +
+        causaHtml +
+        '<div class="diagnosi-text" ' + textStyle + '>' + d.motivazione + '</div>' +
+        testNonHtml +
+      '</div>' +
+      '<div style="margin-top:8px;">' + risultatiHtml + '</div>';
+
     cardContainer.appendChild(section);
   });
 
