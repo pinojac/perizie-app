@@ -928,7 +928,7 @@ Struttura JSON richiesta:
       "tipo": "${ente.alim}",
       "scopo": "perché questo test è rilevante per accertare uno specifico fenomeno elettrico assicurato",
       "istruzioni": "istruzioni tecniche precise per elettrotecnico: impostazione multimetro, posizione puntali, valori attesi",
-      "istruzioniSemplici": "spiegazione pratica per chi ha poca esperienza ma sa usare un multimetro. Usa termini tecnici essenziali (resistenza, Ohm, tensione, continuità) ma spiegali brevemente. Per i componenti, usa il nome tecnico E una descrizione visiva (es. 'il fusibile — quel piccolo cilindro metallico con i tappi bianchi — si trova in basso a destra della scheda'). Indica la posizione precisa sulla base di riferimenti visivi concreti. Spiega dove posizionare il puntale rosso e quello nero in modo preciso. Tono diretto e pratico, non eccessivamente tecnico né infantile.",
+      "wikiImageQuery": "query in inglese per cercare su Wikimedia Commons una foto del componente specifico da testare (es. 'electrolytic capacitor PCB', 'ceramic fuse', 'relay coil terminals'). Usa termini tecnici inglesi precisi. Se il test è visivo/funzionale, scrivi null.",
       "valoriAttesi": "valori normali vs anomali IN CHIAVE ASSICURATIVA: quale anomalia indica fenomeno elettrico coperto, quale indica invece usura o causa meccanica non coperta",
       "unita": "unità di misura (V AC, Ohm, A, MOhm). Per test visivi/funzionali senza misurazioni numeriche: N/A",
       "rispostaDinamica": "SOLO se per questo test esiste una risposta dinamica attesa che indica un componente integro (es. valori che variano progressivamente durante la misura fino a stabilizzarsi o raggiungere OL, come nella carica di un condensatore), descrivi quella dinamica in modo chiaro e conciso (es. 'Il valore parte basso, sale progressivamente e termina a OL: condensatore integro'). Se non esiste nessuna risposta dinamica particolare, scrivi null.",
@@ -954,7 +954,10 @@ Genera 2-4 test PERTINENTI all'accertamento del fenomeno elettrico assicurato. E
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         endpoint: 'models/gemini-2.5-flash:generateContent',
-        body: { contents: [{ parts }] }
+        body: {
+          contents: [{ parts }],
+          generationConfig: { temperature: 0.2 }
+        }
       })
     });
     const data = await res.json();
@@ -974,11 +977,88 @@ Genera 2-4 test PERTINENTI all'accertamento del fenomeno elettrico assicurato. E
 
     hideLoading();
     renderPage(testPageForEnte(state.currentEnteIdx));
+
+    // Genera guide semplici con temperatura 0.4 in parallelo dopo il render
     renderTestPage(state.currentEnteIdx);
+    generateGuideSimplici(state.currentEnteIdx);
 
   } catch(e) {
     hideLoading();
     alert('Errore durante l\'analisi AI: ' + e.message + '\n\nVerifica che la tua API key sia corretta.');
+  }
+}
+
+// ---- GEMINI: GUIDE SEMPLICI (temperatura 0.4) + WIKIMEDIA ----
+async function generateGuideSimplici(enteIdx) {
+  const ente = state.enti[enteIdx];
+
+  for (let i = 0; i < ente.tests.length; i++) {
+    const t = ente.tests[i];
+
+    // 1. Genera guida semplice con temperatura 0.4
+    const promptGuida = `Sei un assistente per perizie elettriche. Per il seguente test, scrivi una spiegazione pratica per chi ha poca esperienza.
+
+Test: "${t.nome}"
+Istruzioni tecniche: "${t.istruzioni}"
+Ente: "${ente.entityDesc}"
+Tipo: ${t.tipo === 'alim' ? 'ente alimentato' : 'ente non alimentato'}
+
+Scrivi 3-5 frasi dirette e pratiche. Usa il nome tecnico del componente seguito da una descrizione visiva concreta tra parentesi (es. "il fusibile (quel piccolo cilindro metallico con tappi bianchi)"). Indica dove mettere il puntale rosso e il puntale nero con riferimenti visivi precisi (posizione, colore, forma del punto di contatto). Tono pratico, non infantile, non eccessivamente tecnico.
+Rispondi con solo il testo della guida, senza JSON, senza titoli.`;
+
+    try {
+      const resGuida = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          endpoint: 'models/gemini-2.5-flash:generateContent',
+          body: {
+            contents: [{ parts: [{ text: promptGuida }] }],
+            generationConfig: { temperature: 0.4 }
+          }
+        })
+      });
+      const dataGuida = await resGuida.json();
+      const guidaTxt = dataGuida.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      ente.tests[i].istruzioniSemplici = guidaTxt;
+
+      // Aggiorna la UI con la guida appena generata
+      const guidaEl = document.getElementById(`guidaSemplice_${enteIdx}_${i}`);
+      if (guidaEl) {
+        guidaEl.textContent = guidaTxt;
+        guidaEl.parentElement.style.display = 'block';
+      }
+    } catch(e) {
+      console.error('Errore guida semplice:', e);
+    }
+
+    // 2. Cerca immagine su Wikimedia Commons
+    if (t.wikiImageQuery) {
+      try {
+        const wikiUrl = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(t.wikiImageQuery)}&gsrlimit=3&prop=imageinfo&iiprop=url|mime&iiurlwidth=400&format=json&origin=*`;
+        const wikiRes = await fetch(wikiUrl);
+        const wikiData = await wikiRes.json();
+        const pages = Object.values(wikiData.query?.pages || {});
+        const imgPage = pages.find(p => {
+          const mime = p.imageinfo?.[0]?.mime || '';
+          return mime.startsWith('image/') && !mime.includes('svg');
+        });
+        const imgUrl = imgPage?.imageinfo?.[0]?.thumburl || null;
+
+        if (imgUrl) {
+          ente.tests[i].wikiImageUrl = imgUrl;
+          const imgWrap = document.getElementById(`wikiImg_${enteIdx}_${i}`);
+          if (imgWrap) {
+            imgWrap.innerHTML = `
+              <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;">📷 Esempio del componente:</div>
+              <img src="${imgUrl}" style="width:100%;max-height:180px;object-fit:contain;border-radius:6px;background:#f8f9fb;"
+                onerror="this.parentElement.style.display='none'" />`;
+          }
+        }
+      } catch(e) {
+        console.error('Errore Wikimedia:', e);
+      }
+    }
   }
 }
 
@@ -1047,11 +1127,11 @@ function renderTestPage(enteIdx) {
       </div>
       <div class="test-card-body">
         <div class="test-instructions">${t.istruzioni}</div>
-        ${t.istruzioniSemplici ? `
         <div style="background:#e6f1fb;border-left:3px solid #1a3a5c;border-radius:0 8px 8px 0;padding:12px 14px;margin-top:2px;">
           <div style="font-size:11px;font-weight:600;color:#1a3a5c;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">👆 Dove mettere i puntali — guida semplice</div>
-          <div style="font-size:13px;color:#1a3a5c;line-height:1.7;">${t.istruzioniSemplici}</div>
-        </div>` : ''}
+          <div id="guidaSemplice_${eIdx}_${i}" style="font-size:13px;color:#1a3a5c;line-height:1.7;font-style:italic;opacity:0.6;">Generazione in corso...</div>
+        </div>
+        <div id="wikiImg_${eIdx}_${i}" style="margin-top:8px;"></div>
         <div class="expected-values">
           <strong>Valori di riferimento</strong>
           ${t.valoriAttesi}
@@ -1085,6 +1165,13 @@ function renderTestPage(enteIdx) {
         <div style="font-size:11px;color:var(--color-text-secondary);margin-top:6px;line-height:1.7;">
           <span style="font-weight:600;color:var(--color-text-primary);">OL</span> = circuito aperto / fuori scala &nbsp;·&nbsp;
           <span style="font-weight:600;color:var(--color-text-primary);">≈</span> = misure instabili/fluttuanti${t.rispostaDinamica ? ` &nbsp;·&nbsp; <span style="font-weight:600;color:#1d9e75;">↗ OK</span> = ${t.rispostaDinamica}` : ''}
+        </div>
+        <div id="motivoWrap_${eIdx}_${i}" style="display:none;margin-top:8px;">
+          <textarea id="motivo_${eIdx}_${i}"
+            placeholder="Motivo test non effettuato (facoltativo) — es. impossibile aprire il coperchio senza danneggiare l'ente"
+            style="width:100%;padding:9px 12px;border:1.5px dashed var(--color-border-secondary);border-radius:8px;font-family:var(--font-sans);font-size:13px;color:var(--color-text-primary);background:var(--color-background-secondary);resize:none;min-height:60px;outline:none;"
+            onchange="state.enti[${eIdx}].tests[${i}].motivoNonEffettuato=this.value"
+            oninput="state.enti[${eIdx}].tests[${i}].motivoNonEffettuato=this.value"></textarea>
         </div>`}
       </div>
     `;
@@ -1098,10 +1185,40 @@ function renderTestPage(enteIdx) {
         dynBtn.addEventListener('click', () => {
           const input = document.getElementById('measure_' + eIdx + '_' + i);
           if (input) { input.value = desc; state.enti[eIdx].measures[i] = desc; }
+          toggleMotivoWrap(eIdx, i);
         });
       }
     }
+
+    // Mostra/nascondi campo motivo in base alla misura
+    const measureInput = document.getElementById('measure_' + eIdx + '_' + i);
+    if (measureInput && measureInput.type !== 'hidden') {
+      measureInput.addEventListener('input', () => toggleMotivoWrap(eIdx, i));
+      measureInput.addEventListener('change', () => toggleMotivoWrap(eIdx, i));
+    }
+
+    // Pulsanti visivi N/A — aggiungi listener per toggleMotivo
+    ['ok','ko','nv'].forEach(k => {
+      const btn = document.getElementById('btn_' + k + '_' + eIdx + '_' + i);
+      if (btn) btn.addEventListener('click', () => toggleMotivoWrap(eIdx, i));
+    });
   });
+}
+
+function toggleMotivoWrap(enteIdx, testIdx) {
+  const measure = state.enti[enteIdx].measures[testIdx];
+  const wrap = document.getElementById('motivoWrap_' + enteIdx + '_' + testIdx);
+  if (!wrap) return;
+  const isEmpty = !measure || measure.trim() === '';
+  wrap.style.display = isEmpty ? 'block' : 'none';
+  if (!isEmpty) {
+    // Reset motivo se la misura viene compilata
+    const textarea = document.getElementById('motivo_' + enteIdx + '_' + testIdx);
+    if (textarea) textarea.value = '';
+    if (state.enti[enteIdx].tests[testIdx]) {
+      state.enti[enteIdx].tests[testIdx].motivoNonEffettuato = '';
+    }
+  }
 }
 
 function setOLEnte(enteIdx, testIdx) {
@@ -1391,11 +1508,12 @@ async function runDiagnosi() {
   const diagnosi = [];
   for (let idx = 0; idx < state.enti.length; idx++) {
     const ente = state.enti[idx];
-    const testsJSON = ente.tests.map((t, i) => ({
+    const testsJSON = ente.tests.map((t, idx) => ({
       test: t.nome,
       unita: t.unita,
-      valoreInserito: ente.measures[i] || 'non misurato',
-      valoriRiferimento: t.valoriAttesi
+      valoreInserito: ente.measures[idx] || 'non misurato',
+      valoriRiferimento: t.valoriAttesi,
+      motivoNonEffettuato: (!ente.measures[idx] || ente.measures[idx].trim() === '') && t.motivoNonEffettuato ? t.motivoNonEffettuato : null
     }));
 
     const prompt = `Sei un perito elettrotecnico specializzato nell'accertamento di danni da fenomeni elettrici.
@@ -1439,7 +1557,10 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           endpoint: 'models/gemini-2.5-flash:generateContent',
-          body: { contents: [{ parts: [{ text: prompt }] }] }
+          body: {
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.2 }
+          }
         })
       });
       const data = await res.json();
