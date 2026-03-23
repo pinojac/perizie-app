@@ -29,7 +29,7 @@ export default async function handler(req, res) {
             </div>
             <div style="background: #f8f9fb; padding: 24px; border-radius: 0 0 8px 8px; border: 1px solid #eef0f4;">
               <p style="color: #505868;">La perizia relativa alla pratica <strong>${id}</strong> è stata completata.</p>
-              <p style="color: #505868;">Il PDF della relazione è stato scaricato automaticamente sul dispositivo dell'operatore al momento della diagnosi.</p>
+              <p style="color: #505868;">In allegato trovi il PDF della relazione.</p>
               <p style="color: #505868; margin-top: 16px;"><strong>Riepilogo:</strong></p>
               <table style="width:100%; border-collapse: collapse; font-size: 14px; color: #505868;">
                 <tr><td style="padding: 6px 0; border-bottom: 1px solid #eef0f4;"><strong>ID Pratica</strong></td><td style="padding: 6px 0; border-bottom: 1px solid #eef0f4;">${id}</td></tr>
@@ -41,7 +41,8 @@ export default async function handler(req, res) {
               </p>
             </div>
           </div>
-        `
+        `,
+        attachments: pdfBase64 && filename ? [{ filename, content: pdfBase64 }] : undefined
       })
     });
 
