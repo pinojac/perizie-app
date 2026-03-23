@@ -833,17 +833,17 @@ function renderEntiList() {
         '<input type="file" id="f_' + idx + '_2g" accept="image/*" onchange="loadPhoto(' + idx + ',2,this)">' +
       '</div>' +
       '<div style="margin-bottom:10px;">' +
-        '<div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;">Note per l'AI (facoltativo)</div>' +
+        '<div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;">Note per l\'AI (facoltativo)</div>' +
         '<textarea style="width:100%;padding:10px 12px;border:1.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);font-family:var(--font-sans);font-size:14px;color:var(--color-text-primary);background:var(--color-background-primary);resize:none;min-height:64px;outline:none;" ' +
-        'placeholder="es. L'assicurato riferisce cali di tensione..." ' +
+        'placeholder="es. L\'assicurato riferisce cali di tensione..." ' +
         'onchange="state.enti[' + idx + '].note=this.value" ' +
         'oninput="state.enti[' + idx + '].note=this.value">' + ente.note + '</textarea>' +
       '</div>' +
       '<div>' +
         '<div style="font-size:12px;font-weight:500;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:7px;">Stato durante i test</div>' +
         '<div class="toggle-group">' +
-          '<button class="toggle-btn ' + alimOn + '" onclick="setAlimEnte(' + idx + ','alim')">⚡ Alimentato</button>' +
-          '<button class="toggle-btn ' + noalimOn + '" onclick="setAlimEnte(' + idx + ','noalim')">○ Non alimentato</button>' +
+          '<button class="toggle-btn ' + alimOn + '" onclick="setAlimEnte(' + idx + ',\'alim\')">⚡ Alimentato</button>' +
+          '<button class="toggle-btn ' + noalimOn + '" onclick="setAlimEnte(' + idx + ',\'noalim\')">○ Non alimentato</button>' +
         '</div>' +
       '</div>';
 
@@ -1058,7 +1058,7 @@ Rispondi con solo il testo della guida, senza JSON, senza titoli.`;
           ente.tests[i].wikiImageUrl = imgUrl;
           const imgWrap = document.getElementById('wikiImg_' + enteIdx + '_' + i);
           if (imgWrap) {
-            imgWrap.innerHTML = '<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;">📷 Esempio del componente:</div><img src="' + imgUrl + '" style="width:100%;max-height:180px;object-fit:contain;border-radius:6px;background:#f8f9fb;" onerror="this.parentElement.style.display='none'" />';
+            imgWrap.innerHTML = '<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;">📷 Esempio del componente:</div><img src="' + imgUrl + '" style="width:100%;max-height:180px;object-fit:contain;border-radius:6px;background:#f8f9fb;" onerror="this.parentElement.style.display=\'none\'" />';
           }
         }
       } catch(e) {
@@ -1091,7 +1091,7 @@ function renderTestPage(enteIdx) {
     const evDiv = document.createElement('div');
     evDiv.style.cssText = 'background:#f8f9fb;border:1px solid var(--color-border-tertiary);border-left:3px solid #e8a020;border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:4px;';
     evDiv.innerHTML = `
-      <div style="font-size:11px;font-weight:600;color:#7a4f00;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">🔍 Evidenze visive rilevate dall'AI</div>
+      <div style="font-size:11px;font-weight:600;color:#7a4f00;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:5px;">🔍 Evidenze visive rilevate dall\'AI</div>
       <div style="font-size:13px;color:var(--color-text-secondary);line-height:1.6;">${ente.evidenzeVisive}</div>
     `;
     container.appendChild(evDiv);
@@ -1130,9 +1130,9 @@ function renderTestPage(enteIdx) {
     const isVisivo = t.unita === 'N/A' || t.unita === 'visivo' || t.unita === 'funzionale' || t.unita === 'visivo/funzionale';
     const misureHtml = isVisivo
       ? '<div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">' +
-        '<button onclick="setMeasureEnte(' + eIdx + ',' + i + ','Nessuna anomalia rilevata')" id="btn_ok_' + eIdx + '_' + i + '" style="width:100%;padding:11px;border:1.5px solid #1d9e75;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:#1d9e75;text-align:left;">✓ Nessuna anomalia rilevata</button>' +
-        '<button onclick="setMeasureEnte(' + eIdx + ',' + i + ','Anomalia rilevata come descritta')" id="btn_ko_' + eIdx + '_' + i + '" style="width:100%;padding:11px;border:1.5px solid #e24b4a;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:#e24b4a;text-align:left;">✗ Anomalia rilevata come descritta</button>' +
-        '<button onclick="setMeasureEnte(' + eIdx + ',' + i + ','Non verificabile')" id="btn_nv_' + eIdx + '_' + i + '" style="width:100%;padding:11px;border:1.5px solid var(--color-border-secondary);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:var(--color-text-secondary);text-align:left;">— Non verificabile</button>' +
+        '<button onclick="setMeasureEnte(' + eIdx + ',' + i + ',\'Nessuna anomalia rilevata\')" id="btn_ok_' + eIdx + '_' + i + '" style="width:100%;padding:11px;border:1.5px solid #1d9e75;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:#1d9e75;text-align:left;">✓ Nessuna anomalia rilevata</button>' +
+        '<button onclick="setMeasureEnte(' + eIdx + ',' + i + ',\'Anomalia rilevata come descritta\')" id="btn_ko_' + eIdx + '_' + i + '" style="width:100%;padding:11px;border:1.5px solid #e24b4a;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:#e24b4a;text-align:left;">✗ Anomalia rilevata come descritta</button>' +
+        '<button onclick="setMeasureEnte(' + eIdx + ',' + i + ',\'Non verificabile\')" id="btn_nv_' + eIdx + '_' + i + '" style="width:100%;padding:11px;border:1.5px solid var(--color-border-secondary);border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;background:var(--color-background-primary);color:var(--color-text-secondary);text-align:left;">— Non verificabile</button>' +
         '<input type="hidden" id="measure_' + eIdx + '_' + i + '" /></div>'
       : '<div class="measure-row">' +
         '<input type="text" inputmode="decimal" placeholder="Inserisci valore" id="measure_' + eIdx + '_' + i + '" onchange="state.enti[' + eIdx + '].measures[' + i + ']=this.value" oninput="state.enti[' + eIdx + '].measures[' + i + ']=this.value" />' +
