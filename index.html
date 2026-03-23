@@ -933,7 +933,7 @@ Struttura JSON richiesta:
       "tipo": "${ente.alim}",
       "scopo": "perché questo test è rilevante per accertare uno specifico fenomeno elettrico assicurato",
       "istruzioni": "istruzioni tecniche precise per elettrotecnico: impostazione multimetro, posizione puntali, valori attesi",
-      "wikiImageQuery": "query di 1-2 parole in inglese per cercare su Wikimedia Commons il componente da misurare. Usa solo il nome generico del componente, senza aggettivi (es. 'capacitor', 'fuse', 'relay', 'motor winding', 'resistor', 'diode', 'transformer'). Se il test è visivo/funzionale (unita N/A), scrivi null.",
+      
       "valoriAttesi": "valori normali vs anomali IN CHIAVE ASSICURATIVA: quale anomalia indica fenomeno elettrico coperto, quale indica invece usura o causa meccanica non coperta",
       "unita": "unità di misura (V AC, Ohm, A, MOhm). Per test visivi/funzionali senza misurazioni numeriche: N/A",
       "rispostaDinamica": "SOLO se per questo test esiste una risposta dinamica attesa che indica un componente integro (es. valori che variano progressivamente durante la misura fino a stabilizzarsi o raggiungere OL, come nella carica di un condensatore), descrivi quella dinamica in modo chiaro e conciso (es. 'Il valore parte basso, sale progressivamente e termina a OL: condensatore integro'). Se non esiste nessuna risposta dinamica particolare, scrivi null.",
@@ -1062,36 +1062,7 @@ Rispondi con solo il testo della guida, senza JSON, senza titoli.`;
       console.error('Errore guida semplice:', e);
     }
 
-     // 2. Cerca immagine via server (evita CORS)
-     const wikiQuery = t.wikiImageQuery || null;
-     if (wikiQuery && t.unita !== 'N/A' && t.unita !== 'visivo' && t.unita !== 'funzionale') {
-       try {
-         const wikiRes = await fetch('/api/wikiimage', {
-           method: 'POST',
-           headers: { 'Content-Type': 'application/json' },
-           body: JSON.stringify({ query: wikiQuery })
-         });
-         const wikiData = await wikiRes.json();
-         const imgUrl = wikiData.url || null;
-         if (imgUrl) {
-           const imgWrap = document.getElementById('wikiImg_' + enteIdx + '_' + i);
-           if (imgWrap) {
-             const caption = document.createElement('div');
-             caption.style.cssText = 'font-size:11px;color:var(--color-text-secondary);margin-bottom:4px;';
-             caption.textContent = '📷 Esempio del componente:';
-             const img = document.createElement('img');
-             img.src = imgUrl;
-             img.style.cssText = 'width:100%;max-height:180px;object-fit:contain;border-radius:6px;background:#f8f9fb;display:block;';
-             img.onerror = function() { imgWrap.style.display = 'none'; };
-             imgWrap.innerHTML = '';
-             imgWrap.appendChild(caption);
-             imgWrap.appendChild(img);
-           }
-         }
-       } catch(e) {
-         console.error('Errore Wikimedia test ' + i, e);
-       }
-     }
+     // Immagini componente: funzionalità rimossa (immagini troppo generiche)
   }
 }
 
@@ -1188,7 +1159,7 @@ function renderTestPage(enteIdx) {
           '<div style="font-size:11px;font-weight:600;color:#1a3a5c;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">📋 Come eseguire il test — guida semplice</div>' +
           '<div id="guidaSemplice_' + eIdx + '_' + i + '" style="font-size:13px;color:#1a3a5c;line-height:1.7;font-style:italic;opacity:0.6;">Generazione in corso...</div>' +
         '</div>' +
-        '<div id="wikiImg_' + eIdx + '_' + i + '" style="margin-top:8px;"></div>' +
+        
         '<div class="expected-values"><strong>Valori di riferimento</strong>' + t.valoriAttesi + '</div>' +
         misureHtml +
         motivoHtml +
