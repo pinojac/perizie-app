@@ -1022,22 +1022,32 @@ async function generateGuideSimplici(enteIdx) {
     // 1. Genera guida semplice con temperatura 0.4
     const isTestVisivo = t.unita === 'N/A' || t.unita === 'visivo' || t.unita === 'funzionale' || t.unita === 'visivo/funzionale';
     const promptGuida = isTestVisivo
-      ? `Sei un assistente per perizie elettriche. Per il seguente test VISIVO O FUNZIONALE, scrivi una guida pratica su come eseguirlo per chi ha poca esperienza.
+      ? `Sei un assistente per perizie elettriche. Per il seguente test VISIVO O FUNZIONALE, scrivi una guida pratica su come eseguirlo.
 
 Test: "${t.nome}"
 Istruzioni: "${t.istruzioni}"
 Ente: "${ente.entityDesc}"
 
-Scrivi 3-5 frasi dirette su COSA GUARDARE o COSA FARE fisicamente: dove guardare, cosa cercare, come muovere o azionare l'ente se necessario. NON menzionare puntali, multimetro o misurazioni — questo è un test visivo/funzionale. Usa descrizioni visive concrete (colori, forme, posizioni). Tono pratico e diretto.
+REGOLE OBBLIGATORIE:
+- Descrivi COSA GUARDARE o COSA FARE fisicamente, in modo che chiunque possa eseguirlo senza conoscenze tecniche
+- Usa solo riferimenti visivi: colori, forme, dimensioni, posizioni fisiche ("in alto a sinistra", "vicino al cavo di alimentazione", "il componente cilindrico nero grande come un pollice")
+- NON menzionare puntali, multimetro o misurazioni
+- NON usare numeri di PIN, codici componente, sigle tecniche non visibili fisicamente sull'ente
+- Se un punto non è identificabile visivamente senza datasheet, scrivi esplicitamente: "Questo punto richiede il datasheet dell'ente per essere identificato correttamente"
 Rispondi con solo il testo della guida, senza JSON, senza titoli.`
-      : `Sei un assistente per perizie elettriche. Per il seguente test con MULTIMETRO, scrivi una guida pratica per chi ha poca esperienza.
+      : `Sei un assistente per perizie elettriche. Per il seguente test con MULTIMETRO, scrivi una guida pratica per chi ha poca esperienza ma sa usare un multimetro.
 
 Test: "${t.nome}"
 Istruzioni tecniche: "${t.istruzioni}"
 Ente: "${ente.entityDesc}"
 Tipo: ${t.tipo === 'alim' ? 'ente alimentato' : 'ente non alimentato'}
 
-Scrivi 3-5 frasi dirette e pratiche. Usa il nome tecnico del componente seguito da una descrizione visiva (es. "il fusibile — quel piccolo cilindro metallico con tappi bianchi"). Indica con precisione dove posizionare il puntale ROSSO e il puntale NERO usando riferimenti visivi concreti (posizione, colore, forma). Tono pratico, non infantile.
+REGOLE OBBLIGATORIE:
+- Descrivi il componente con il suo nome tecnico seguito da come appare fisicamente: "il fusibile (piccolo cilindro metallico con tappi bianchi, solitamente vicino all'ingresso di alimentazione)"
+- Indica dove mettere il puntale ROSSO e dove mettere il puntale NERO usando SOLO riferimenti visivi concreti: posizione fisica, colore del connettore, forma, dimensione, contesto ("il terminale sinistro del componente", "il filo marrone", "il pin più vicino al bordo della scheda")
+- Se sull'ente sono visibili fisicamente sigle o codici serigrafati (es. "F1" vicino al fusibile, "R12" sulla scheda), USALI — sono riferimenti preziosi per orientarsi. Al contrario, NON usare riferimenti tratti da datasheet che non sono visibili sull'ente fisico (es. numeri di pin non stampati, designazioni interne non serigrafate)
+- Se i punti di misura non sono identificabili visivamente senza documentazione tecnica, scrivi esplicitamente: "I punti di misura di questo test richiedono il datasheet dell'ente per essere identificati con precisione"
+- Massimo 4 frasi. Tono diretto e pratico.
 Rispondi con solo il testo della guida, senza JSON, senza titoli.`;
 
     try {
