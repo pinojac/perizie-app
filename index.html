@@ -985,7 +985,13 @@ Per i test con multimetro, wikiImageQuery deve descrivere il COMPONENTE SPECIFIC
     ente.entityDesc = parsed.entita || '';
     ente.highVoltage = parsed.altaTensione || false;
     ente.evidenzeVisive = parsed.evidenzeVisive || '';
-    ente.tests = parsed.tests || [];
+
+    // Filtra test che richiedono strumenti specialistici non standard
+    const strumentiVietati = /megger|megaohm|megaohmet|oscilloscop|analizzator|impedenzimetro|lcr meter|capacimetro|termocamera|clamp meter di precisione/i;
+    const allTests = parsed.tests || [];
+    ente.tests = allTests.filter(t => !strumentiVietati.test(t.nome + ' ' + (t.istruzioni || '') + ' ' + (t.scopo || '')));
+    if (ente.tests.length === 0) ente.tests = allTests; // fallback se filtro troppo aggressivo
+
     ente.measures = new Array(ente.tests.length).fill('');
     state.extraPhotos = new Array(ente.tests.length).fill(null);
 
@@ -1056,20 +1062,17 @@ Rispondi con solo il testo della guida, senza JSON, senza titoli.`;
       console.error('Errore guida semplice:', e);
     }
 
-     // 2. Cerca immagine su Wikimedia Commons
+     // 2. Cerca immagine via server (evita CORS)
      const wikiQuery = t.wikiImageQuery || null;
-     if (wikiQuery) {
+     if (wikiQuery && t.unita !== 'N/A' && t.unita !== 'visivo' && t.unita !== 'funzionale') {
        try {
-         const wikiUrl = 'https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrnamespace=6&gsrsearch=' + encodeURIComponent(wikiQuery) + '&gsrlimit=10&prop=imageinfo&iiprop=url|mime|thumburl&iiurlwidth=400&format=json&origin=*';
-         const wikiRes = await fetch(wikiUrl);
-         const wikiData = await wikiRes.json();
-         const pages = Object.values((wikiData.query && wikiData.query.pages) || {});
-         const imgPage = pages.find(function(p) {
-           const mime = (p.imageinfo && p.imageinfo[0]) ? (p.imageinfo[0].mime || '') : '';
-           return mime.startsWith('image/jpeg') || mime.startsWith('image/png') || mime.startsWith('image/webp');
+         const wikiRes = await fetch('/api/wikiimage', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ query: wikiQuery })
          });
-         const imgInfo = (imgPage && imgPage.imageinfo) ? imgPage.imageinfo[0] : null;
-         const imgUrl = imgInfo ? (imgInfo.thumburl || imgInfo.url || null) : null;
+         const wikiData = await wikiRes.json();
+         const imgUrl = wikiData.url || null;
          if (imgUrl) {
            const imgWrap = document.getElementById('wikiImg_' + enteIdx + '_' + i);
            if (imgWrap) {
@@ -1078,7 +1081,7 @@ Rispondi con solo il testo della guida, senza JSON, senza titoli.`;
              caption.textContent = '📷 Esempio del componente:';
              const img = document.createElement('img');
              img.src = imgUrl;
-             img.style.cssText = 'width:100%;max-height:180px;object-fit:contain;border-radius:6px;background:#f8f9fb;';
+             img.style.cssText = 'width:100%;max-height:180px;object-fit:contain;border-radius:6px;background:#f8f9fb;display:block;';
              img.onerror = function() { imgWrap.style.display = 'none'; };
              imgWrap.innerHTML = '';
              imgWrap.appendChild(caption);
@@ -1565,9 +1568,9 @@ Rispondi SOLO con JSON valido, senza markdown, senza backtick:
   "esito": "ELETTRICO|NON_ELETTRICO|NON_DETERMINABILE",
   "danno": true/false (true SOLO se ci sono evidenze positive di danno elettrico),
   "titoloDiagnosi": "titolo tecnico preciso es: 'Danno da sovratensione confermato', 'Nessuna evidenza di danno elettrico riscontrata', 'Guasto da causa meccanica — nessun fenomeno elettrico evidenziato'",
-  "motivazione": "Spiegazione tecnica chiara. Per ogni test non effettuato con motivazione dichiarata, scrivi: 'Il test [nome] non è stato eseguito in quanto [motivazione dichiarata].' Se esito NON_ELETTRICO con test mancanti motivati, concludi con: 'Sarà possibile rivalutare la sussistenza di danni elettrici qualora fosse reso disponibile eseguire i test non effettuati.' Non fare riferimento a polizze.",
+  "motivazione": "Spiegazione tecnica chiara e diretta sui test effettuati e le loro risultanze. NON menzionare i test non effettuati nella motivazione principale. Non fare riferimento a polizze.",
   "causaProbabile": "causa tecnica più probabile es: 'Sovratensione transitoria', 'Nessun danno elettrico evidenziato', 'Guasto meccanico', 'Usura'",
-  "testNonEffettuati": "stringa leggibile con nome test e motivazione per ogni test non eseguito, oppure null",
+  "testNonEffettuati": "SOLO se ci sono test non eseguiti con motivazione dichiarata: breve nota finale tipo 'Non è stato possibile eseguire il test [nome] in quanto [motivazione]. Si consiglia l'esecuzione qualora reso disponibile per una diagnosi completa.' Altrimenti null.",
   "risultati": [
     {
       "nome": "nome del test",
