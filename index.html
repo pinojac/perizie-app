@@ -944,7 +944,8 @@ Struttura JSON richiesta:
   ]
 }
 
-Genera 2-4 test PERTINENTI all'accertamento del fenomeno elettrico assicurato.
+
+Genera 2-5 test PERTINENTI all'accertamento del fenomeno elettrico assicurato.
 
 VINCOLI STRUMENTI: Proponi SOLO test eseguibili con:
 - Multimetro digitale standard (tensione AC/DC, resistenza Ohm, continuità, diodo)
@@ -952,8 +953,10 @@ VINCOLI STRUMENTI: Proponi SOLO test eseguibili con:
 - Verifica funzionale (accensione, risposta a comandi)
 NON proporre test che richiedono: Megger, Megaohmetro, oscilloscopio, pinza amperometrica di precisione, strumenti da laboratorio o attrezzature specialistiche.
 
-Per i test visivi o funzionali (unita: N/A), il campo wikiImageQuery deve essere null.
-Per i test con multimetro, wikiImageQuery deve descrivere il COMPONENTE SPECIFICO da cercare su Wikimedia Commons in inglese (es. "electrolytic capacitor terminals", "electric motor winding terminals", "ceramic fuse").`;
+REGOLA FONDAMENTALE — UN TEST, UNA SOLA MISURAZIONE:
+Ogni test deve prevedere UNA SOLA misurazione in UN SOLO punto, con un unico valore da inserire.
+Se un accertamento richiede misurazioni diverse (es. resistenza tra conduttori E resistenza verso terra/carcassa), crea un test SEPARATO per ciascuna, ognuno con il proprio nome, istruzioni e valori attesi specifici.
+Non raggruppare mai misurazioni diverse in un unico test.`;
 
   const parts = [{ text: prompt }];
   photos.forEach(p => {
@@ -1518,15 +1521,17 @@ async function runDiagnosi() {
 
     const prompt = `Sei un perito elettrotecnico specializzato nell'accertamento di danni da fenomeni elettrici per conto di compagnie assicurative.
 
-PRINCIPIO FONDAMENTALE: L'onere di provare il danno elettrico ricade sull'assicurato, non sul perito. Il tuo compito è verificare se esistono elementi che COMPROVANO un danno di natura elettrica. In assenza di tali evidenze, la diagnosi è "nessuna evidenza riscontrata" — NON "incerto" o "non determinabile".
+GERARCHIA DELLE EVIDENZE — segui rigorosamente questo ordine:
 
-LOGICA DIAGNOSI:
-- Evidenze positive di danno elettrico (bruciature, valori anomali coerenti con sovratensione/cortocircuito) → esito ELETTRICO
-- Evidenze di cause NON elettriche (usura, rottura meccanica) → esito NON_ELETTRICO
-- Nessuna evidenza di danno elettrico nei test effettuati → esito NON_ELETTRICO, anche se alcuni test non sono stati eseguiti
-- NON_DETERMINABILE SOLO se i risultati sono genuinamente contraddittori, NON per mancanza di test
+1. SE anche un solo test strumentale (multimetro) mostra valori anomali COERENTI con danno elettrico (sovratensione, cortocircuito, arco voltaico) → esito ELETTRICO. Le misurazioni anomale prevalgono SEMPRE su test visivi negativi o altri test nella norma. L'assenza di bruciature visibili NON esclude il danno elettrico interno.
 
-TEST NON EFFETTUATI: Se un test non è stato eseguito per un motivo dichiarato dal perito (campo motivoNonEffettuato), riportalo nella motivazione come: "Il test [nome] non è stato eseguito in quanto [motivazione]." La mancanza di test per causa dichiarata NON deve portare a una diagnosi di incertezza — la diagnosi si basa sui test effettuati.
+2. SE tutti i test strumentali effettuati mostrano valori nella norma E i test visivi non rilevano anomalie → esito NON_ELETTRICO, anche se alcuni test non sono stati eseguiti.
+
+3. SE le evidenze puntano chiaramente a cause NON elettriche (usura meccanica, rottura fisica documentata) → esito NON_ELETTRICO.
+
+4. NON_DETERMINABILE SOLO se i risultati strumentali sono genuinamente contraddittori tra loro. NON usarlo per assenza di segni visivi o per mancanza di test.
+
+TEST NON EFFETTUATI: Riportali SOLO come breve nota finale: "Il test [nome] non è stato eseguito in quanto [motivazione]. Qualora fosse reso disponibile eseguirlo, si potrà procedere a valutazione integrativa." Non usare mai i test mancanti per giustificare incertezza se i test eseguiti indicano già una direzione chiara.
 
 Ente: ${ente.entityDesc}
 Stato: ${ente.alim === 'alim' ? 'alimentato' : 'non alimentato'}
