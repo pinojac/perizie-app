@@ -910,11 +910,11 @@ async function runAnalisiFotoForEnte(enteIdx) {
   const photos = ente.photos.filter(p => p !== null);
   const alimTxt = ente.alim === 'alim' ? 'alimentato (sotto tensione)' : 'non alimentato (scollegato dalla rete)';
 
-  const prompt = `Sei un perito assicurativo elettrotecnico specializzato in sinistri RAMI ELEMENTARI con garanzia Fenomeno Elettrico.
+  const prompt = `Sei un perito elettrotecnico specializzato nell'accertamento di danni da fenomeni elettrici.
 
 Il tuo compito NON è diagnosticare generici guasti, ma ESCLUSIVAMENTE determinare se vi sono evidenze di danno riconducibile a fenomeno elettrico assicurato: sbalzi di tensione, sovratensione (inclusa fulminazione), cortocircuito, arco voltaico, induzione elettromagnetica.
 
-NON rientrano nella copertura e NON devono orientare la diagnosi: usura meccanica, rotture fisiche, danni da urti/cadute, corrosione, fine vita del componente, guasti da manutenzione carente.
+NON sono fenomeni elettrici e NON devono orientare la diagnosi verso un danno elettrico: usura meccanica, rotture fisiche, danni da urti/cadute, corrosione, fine vita del componente, guasti da manutenzione carente.
 
 Analizza le foto e rispondi SOLO con JSON valido, senza markdown, senza backtick.
 
@@ -926,7 +926,7 @@ Struttura JSON richiesta:
 {
   "entita": "nome e descrizione breve dell'ente",
   "altaTensione": true/false (true SOLO se l'ente opera tipicamente a tensioni trifase >230V, es. motori industriali 400V, quadri MT/BT, inverter industriali. FALSE per qualsiasi elettrodomestico, scheda di controllo domestica, pompa monofase, dispositivo consumer, o qualsiasi ente non alimentato durante i test),
-  "evidenzeVisive": "descrizione di evidenze visive già visibili nelle foto: bruciature, annerimenti, componenti fusi, tracce di arco elettrico (suggeriscono fenomeno elettrico) OPPURE usura, rotture meccaniche, corrosione (suggeriscono cause NON coperte dalla polizza)",
+  "evidenzeVisive": "descrizione di evidenze visive già visibili nelle foto: bruciature, annerimenti, componenti fusi, tracce di arco elettrico (suggeriscono fenomeno elettrico) OPPURE usura, rotture meccaniche, corrosione (suggeriscono cause NON di natura elettrica)",
   "tests": [
     {
       "nome": "nome breve del test",
@@ -934,7 +934,7 @@ Struttura JSON richiesta:
       "scopo": "perché questo test è rilevante per accertare uno specifico fenomeno elettrico assicurato",
       "istruzioni": "istruzioni tecniche precise per elettrotecnico: impostazione multimetro, posizione puntali, valori attesi",
       
-      "valoriAttesi": "valori normali vs anomali IN CHIAVE ASSICURATIVA: quale anomalia indica fenomeno elettrico coperto, quale indica invece usura o causa meccanica non coperta",
+      "valoriAttesi": "valori normali vs anomali: quale anomalia indica un danno da fenomeno elettrico, quale indica invece usura o causa meccanica non elettrica",
       "unita": "unità di misura (V AC, Ohm, A, MOhm). Per test visivi/funzionali senza misurazioni numeriche: N/A",
       "rispostaDinamica": "SOLO se per questo test esiste una risposta dinamica attesa che indica un componente integro (es. valori che variano progressivamente durante la misura fino a stabilizzarsi o raggiungere OL, come nella carica di un condensatore), descrivi quella dinamica in modo chiaro e conciso (es. 'Il valore parte basso, sale progressivamente e termina a OL: condensatore integro'). Se non esiste nessuna risposta dinamica particolare, scrivi null.",
       "fotoSufficiente": true,
@@ -956,7 +956,13 @@ NON proporre test che richiedono: Megger, Megaohmetro, oscilloscopio, pinza ampe
 REGOLA FONDAMENTALE — UN TEST, UNA SOLA MISURAZIONE:
 Ogni test deve prevedere UNA SOLA misurazione in UN SOLO punto, con un unico valore da inserire.
 Se un accertamento richiede misurazioni diverse (es. resistenza tra conduttori E resistenza verso terra/carcassa), crea un test SEPARATO per ciascuna, ognuno con il proprio nome, istruzioni e valori attesi specifici.
-Non raggruppare mai misurazioni diverse in un unico test.`;
+Non raggruppare mai misurazioni diverse in un unico test.
+
+CASO SPECIALE — DIODI E COMPONENTI CON POLARITÀ:
+Per i diodi, crea SEMPRE due test separati:
+- "Test diodo [nome] — senso diretto" (puntale rosso su anodo, nero su catodo)
+- "Test diodo [nome] — senso inverso" (puntale rosso su catodo, nero su anodo)
+Ciascuno con i propri valori attesi specifici. In questo modo il perito inserisce due valori distinti e la diagnosi può essere precisa.`;
 
   const parts = [{ text: prompt }];
   photos.forEach(p => {
